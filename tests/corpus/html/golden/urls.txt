@@ -1,0 +1,15 @@
+<a href="https://T1/T2/T3/T4?T5#T6">T7</a>
+<a href="/T8/T9/T10/">T11</a>
+<a href="T8/T12/T13/T14">T15</a>
+<a href="mailto:T16">T17</a>
+<a href="tel:T18">T19</a>
+<a href="javascript:T20">T21</a>
+<a href="data:T22">T23</a>
+<a href="ftp://T24/T25/T26">T27</a>
+<a href="//T28/T29">T30</a>
+<a href="#T31">T32</a>
+<a href="?T33">T34</a>
+<a href="https://T35/T36">T37</a>
+<a href="T38">T39</a>
+<img src="https://T35/T40" srcset="T41" alt>
+<form action="/T8/T10" formaction="/T42/T43"></form>

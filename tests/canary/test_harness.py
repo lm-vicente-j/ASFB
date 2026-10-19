@@ -1,23 +1,34 @@
+import html
+
 import pytest
 
 from asfb.types.key import SessionKey
 from tests.canary.harness import (
     CORPUS,
+    ENTITY_PLACEHOLDER,
+    HTML_CORPUS,
     PLACEHOLDER,
     Carrier,
     find_leaks,
+    html_pipeline,
     load_carriers,
-    m0_pipeline,
+    load_html_carriers,
     new_canary,
     plant,
     variants,
 )
 
 CARRIERS = load_carriers()
+HTML_CARRIERS = load_html_carriers()
 
 
 def _identity(text: str, key: SessionKey) -> str:
     return text
+
+
+def _identity_html(text: str, key: SessionKey) -> str:
+    """HTML-aware identity: entities are decoded, so entity-encoded carriers stay visible."""
+    return html.unescape(text)
 
 
 def test_corpus_has_unique_ids_and_placeholders() -> None:
@@ -29,6 +40,15 @@ def test_corpus_has_unique_ids_and_placeholders() -> None:
 
 def test_corpus_is_plain_ascii() -> None:
     assert CORPUS.read_bytes().isascii()
+
+
+def test_html_corpus_has_unique_ids_and_is_plain_ascii() -> None:
+    ids = [carrier.id for carrier in HTML_CARRIERS]
+    assert len(ids) >= 20
+    assert len(set(ids)) == len(ids)
+    for carrier in HTML_CARRIERS:
+        assert PLACEHOLDER in carrier.template or ENTITY_PLACEHOLDER in carrier.template
+    assert HTML_CORPUS.read_bytes().isascii()
 
 
 def test_variants_cover_all_encodings() -> None:
@@ -50,6 +70,15 @@ def test_identity_pipeline_is_flagged_for_every_variant(carrier: Carrier) -> Non
         assert find_leaks([out], [canary]), f"variant {form!r} not flagged"
 
 
+@pytest.mark.parametrize("carrier", HTML_CARRIERS, ids=lambda carrier: carrier.id)
+def test_html_identity_pipeline_is_flagged_for_every_variant(carrier: Carrier) -> None:
+    canary = new_canary()
+    key = SessionKey.generate()
+    for form in variants(canary):
+        out = _identity_html(plant(carrier.template, form), key)
+        assert find_leaks([out], [canary]), f"variant {form!r} not flagged"
+
+
 def test_bytes_blob_is_flagged() -> None:
     canary = new_canary()
     assert find_leaks([plant("x @@CANARY@@", canary).encode("utf-8")], [canary]) == [canary]
@@ -57,11 +86,11 @@ def test_bytes_blob_is_flagged() -> None:
 
 def test_false_positive_check_no_canary_no_leak() -> None:
     canary = new_canary()
-    out = m0_pipeline("nothing secret here", SessionKey.generate())
-    assert find_leaks([out, "", b""], [canary]) == []
+    out = html_pipeline("<p>nothing secret here</p>", SessionKey.generate())
+    assert find_leaks([*out, "", b""], [canary]) == []
 
 
 def test_planted_canary_is_detected_in_clean_output() -> None:
     canary = new_canary()
-    out = m0_pipeline("nothing secret here", SessionKey.generate())
-    assert find_leaks([out, plant("leak: @@CANARY@@", canary)], [canary]) == [canary]
+    out = html_pipeline("<p>nothing secret here</p>", SessionKey.generate())
+    assert find_leaks([*out, plant("<p>leak: @@CANARY@@</p>", canary)], [canary]) == [canary]

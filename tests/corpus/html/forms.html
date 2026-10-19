@@ -1,0 +1,16 @@
+<form id="invoice-form" action="/invoices/send" method="post" enctype="multipart/form-data">
+  <label for="customer-email">Email</label>
+  <input id="customer-email" type="email" name="email" required autocomplete="email">
+  <label for="amount">Amount</label>
+  <input id="amount" type="number" name="amount" min="0" step="0.01">
+  <input type="hidden" name="csrf" value="f3a9c2">
+  <select name="currency" form="invoice-form"><option value="eur" selected>EUR</option></select>
+  <textarea name="notes" rows="3">Pay within 30 days</textarea>
+  <button type="submit" formaction="/invoices/draft" class="btn btn-success">Save</button>
+  <datalist id="units"><option value="hours"></option></datalist>
+  <input list="units" name="unit">
+  <output for="amount">0</output>
+  <fieldset><legend>Terms</legend></fieldset>
+</form>
+<p id="ref-1" headers="c1">note</p>
+<p aria-labelledby="customer-email amount" aria-describedby="missing-id">x</p>

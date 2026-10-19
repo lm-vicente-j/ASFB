@@ -1,5 +1,5 @@
 import re
-from typing import Any, Final, Literal
+from typing import Any, Final, Literal, cast
 
 import pytest
 from hypothesis import assume, given
@@ -8,10 +8,12 @@ from hypothesis import strategies as st
 from asfb.egress.gate import emit
 from asfb.errors import EgressError, ErrorCode
 from asfb.sanitize.tokens import tokenize
-from asfb.schema.doc import DocV1, Leaf, Profile, VocabRef
+from asfb.schema.doc import DocV1, Profile, SourceKind, VocabRef
+from asfb.schema.html import Attr, Doctype, Element, Node, Text
 from asfb.types.key import SessionKey
+from asfb.types.token import Token
 from asfb.types.untrusted import Untrusted
-from asfb.types.values import Bucket, EnumValue
+from asfb.types.values import EnumValue
 from tests.stubs import STUB_VOCAB
 
 REGISTRY = {STUB_VOCAB.id: STUB_VOCAB}
@@ -22,11 +24,15 @@ PLAIN_TEXT = st.text(
     alphabet=st.characters(exclude_categories=NO_SURROGATES), min_size=12, max_size=40
 )
 TERMS = sorted(STUB_VOCAB.terms)
-OTHER_LEAVES: list[st.SearchStrategy[Leaf]] = [
-    st.sampled_from([EnumValue(vocab=STUB_VOCAB.id, term=term) for term in TERMS]),
-    st.integers(min_value=0, max_value=2**64 - 1).map(Bucket.log2),
-    st.booleans(),
-    st.integers(min_value=0, max_value=2**31 - 1),
+OTHER_NODES: list[st.SearchStrategy[Node]] = [
+    st.sampled_from(TERMS).map(lambda term: Element(tag=EnumValue(vocab=STUB_VOCAB.id, term=term))),
+    st.booleans().map(lambda html: Doctype(html=html)),
+    st.sampled_from(TERMS).map(
+        lambda term: Element(
+            tag=EnumValue(vocab=STUB_VOCAB.id, term="btn"),
+            attrs=(Attr(name=EnumValue(vocab=STUB_VOCAB.id, term=term), value=True),),
+        )
+    ),
 ]
 
 
@@ -34,10 +40,15 @@ OTHER_LEAVES: list[st.SearchStrategy[Leaf]] = [
 def documents(draw: st.DrawFn) -> tuple[DocV1, list[str]]:
     key = SessionKey(draw(st.binary(min_size=32, max_size=32)))
     texts = draw(st.lists(PLAIN_TEXT, max_size=6))
-    leaves: list[Leaf] = [tokenize(key, Untrusted(text)) for text in texts]
-    leaves.extend(draw(st.lists(st.one_of(*OTHER_LEAVES), max_size=6)))
-    items = tuple(draw(st.permutations(leaves)))
-    doc = DocV1(profile=draw(st.sampled_from(Profile)), vocab=(STUB_REF,), items=items)
+    nodes: list[Node] = [Text(text=tokenize(key, Untrusted(text))) for text in texts]
+    nodes.extend(draw(st.lists(st.one_of(*OTHER_NODES), max_size=6)))
+    body = tuple(draw(st.permutations(nodes)))
+    doc = DocV1(
+        profile=draw(st.sampled_from(Profile)),
+        source=SourceKind.HTML,
+        vocab=(STUB_REF,),
+        body=body,
+    )
     return doc, texts
 
 
@@ -54,8 +65,10 @@ def test_valid_documents_emit_and_round_trip(sample: tuple[DocV1, list[str]]) ->
 @given(st.text(alphabet=st.characters(exclude_categories=NO_SURROGATES), min_size=1, max_size=20))
 def test_raw_string_leaves_are_refused(value: str) -> None:
     assume(TOKEN_RE.fullmatch(value) is None)
-    raw_items: tuple[Any, ...] = (value,)
-    doc = DocV1.model_construct(profile=Profile.STRICT, vocab=(STUB_REF,), items=raw_items)
+    raw_body: tuple[Any, ...] = (Text.model_construct(kind="text", text=cast(Token, value)),)
+    doc = DocV1.model_construct(
+        profile=Profile.STRICT, source=SourceKind.HTML, vocab=(STUB_REF,), body=raw_body
+    )
     with pytest.raises(EgressError) as info:
         emit(doc, vocab=REGISTRY)
     assert info.value.code is ErrorCode.E_EGRESS_SCHEMA

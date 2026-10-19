@@ -1,0 +1,17 @@
+{
+  "id": "url.schemes",
+  "version": 1,
+  "terms": [
+    "blob",
+    "data",
+    "file",
+    "ftp",
+    "http",
+    "https",
+    "javascript",
+    "mailto",
+    "tel",
+    "ws",
+    "wss"
+  ]
+}

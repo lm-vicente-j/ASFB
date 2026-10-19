@@ -1,31 +1,149 @@
 {
   "$defs": {
-    "Bucket": {
+    "Attr": {
       "additionalProperties": false,
       "properties": {
-        "index": {
-          "maximum": 64,
-          "minimum": 0,
-          "title": "Index",
-          "type": "integer"
+        "name": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            }
+          ],
+          "title": "Name"
         },
-        "scheme": {
-          "$ref": "#/$defs/BucketScheme"
+        "value": {
+          "anyOf": [
+            {
+              "const": true,
+              "type": "boolean"
+            },
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "$ref": "#/$defs/Url"
+            },
+            {
+              "items": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/EnumValue"
+                  },
+                  {
+                    "pattern": "^t_[0-9a-f]{16}$",
+                    "type": "string"
+                  }
+                ]
+              },
+              "maxItems": 128,
+              "type": "array"
+            }
+          ],
+          "title": "Value"
         }
       },
       "required": [
-        "scheme",
-        "index"
+        "name",
+        "value"
       ],
-      "title": "Bucket",
+      "title": "Attr",
       "type": "object"
     },
-    "BucketScheme": {
-      "enum": [
-        "log2"
+    "Doctype": {
+      "additionalProperties": false,
+      "properties": {
+        "html": {
+          "title": "Html",
+          "type": "boolean"
+        },
+        "kind": {
+          "const": "doctype",
+          "default": "doctype",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "html"
       ],
-      "title": "BucketScheme",
-      "type": "string"
+      "title": "Doctype",
+      "type": "object"
+    },
+    "Element": {
+      "additionalProperties": false,
+      "properties": {
+        "attrs": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Attr"
+          },
+          "maxItems": 64,
+          "title": "Attrs",
+          "type": "array"
+        },
+        "children": {
+          "default": [],
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "doctype": "#/$defs/Doctype",
+                "element": "#/$defs/Element",
+                "opaque": "#/$defs/Opaque",
+                "text": "#/$defs/Text"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/Element"
+              },
+              {
+                "$ref": "#/$defs/Text"
+              },
+              {
+                "$ref": "#/$defs/Opaque"
+              },
+              {
+                "$ref": "#/$defs/Doctype"
+              }
+            ]
+          },
+          "maxItems": 20000,
+          "title": "Children",
+          "type": "array"
+        },
+        "kind": {
+          "const": "element",
+          "default": "element",
+          "title": "Kind",
+          "type": "string"
+        },
+        "tag": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            }
+          ],
+          "title": "Tag"
+        }
+      },
+      "required": [
+        "tag"
+      ],
+      "title": "Element",
+      "type": "object"
     },
     "EnumValue": {
       "additionalProperties": false,
@@ -49,6 +167,41 @@
       "title": "EnumValue",
       "type": "object"
     },
+    "Opaque": {
+      "additionalProperties": false,
+      "properties": {
+        "form": {
+          "$ref": "#/$defs/OpaqueForm"
+        },
+        "kind": {
+          "const": "opaque",
+          "default": "opaque",
+          "title": "Kind",
+          "type": "string"
+        },
+        "text": {
+          "pattern": "^t_[0-9a-f]{16}$",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "form",
+        "text"
+      ],
+      "title": "Opaque",
+      "type": "object"
+    },
+    "OpaqueForm": {
+      "enum": [
+        "comment",
+        "cdata",
+        "pi",
+        "decl"
+      ],
+      "title": "OpaqueForm",
+      "type": "string"
+    },
     "Profile": {
       "enum": [
         "strict",
@@ -56,6 +209,111 @@
       ],
       "title": "Profile",
       "type": "string"
+    },
+    "SourceKind": {
+      "enum": [
+        "html"
+      ],
+      "title": "SourceKind",
+      "type": "string"
+    },
+    "Text": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "text",
+          "default": "text",
+          "title": "Kind",
+          "type": "string"
+        },
+        "text": {
+          "pattern": "^t_[0-9a-f]{16}$",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "Text",
+      "type": "object"
+    },
+    "Url": {
+      "additionalProperties": false,
+      "properties": {
+        "authority": {
+          "anyOf": [
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Authority"
+        },
+        "fragment": {
+          "anyOf": [
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fragment"
+        },
+        "path": {
+          "default": [],
+          "items": {
+            "pattern": "^t_[0-9a-f]{16}$",
+            "type": "string"
+          },
+          "maxItems": 256,
+          "title": "Path",
+          "type": "array"
+        },
+        "query": {
+          "anyOf": [
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query"
+        },
+        "rooted": {
+          "default": false,
+          "title": "Rooted",
+          "type": "boolean"
+        },
+        "scheme": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "trailing_slash": {
+          "default": false,
+          "title": "Trailing Slash",
+          "type": "boolean"
+        }
+      },
+      "title": "Url",
+      "type": "object"
     },
     "VocabRef": {
       "additionalProperties": false,
@@ -83,30 +341,34 @@
   },
   "additionalProperties": false,
   "properties": {
-    "items": {
+    "body": {
       "items": {
-        "anyOf": [
+        "discriminator": {
+          "mapping": {
+            "doctype": "#/$defs/Doctype",
+            "element": "#/$defs/Element",
+            "opaque": "#/$defs/Opaque",
+            "text": "#/$defs/Text"
+          },
+          "propertyName": "kind"
+        },
+        "oneOf": [
           {
-            "pattern": "^t_[0-9a-f]{16}$",
-            "type": "string"
+            "$ref": "#/$defs/Element"
           },
           {
-            "$ref": "#/$defs/EnumValue"
+            "$ref": "#/$defs/Text"
           },
           {
-            "$ref": "#/$defs/Bucket"
+            "$ref": "#/$defs/Opaque"
           },
           {
-            "type": "boolean"
-          },
-          {
-            "maximum": 2147483647,
-            "minimum": 0,
-            "type": "integer"
+            "$ref": "#/$defs/Doctype"
           }
         ]
       },
-      "title": "Items",
+      "maxItems": 20000,
+      "title": "Body",
       "type": "array"
     },
     "profile": {
@@ -118,6 +380,9 @@
       "title": "Schema Id",
       "type": "string"
     },
+    "source": {
+      "$ref": "#/$defs/SourceKind"
+    },
     "vocab": {
       "items": {
         "$ref": "#/$defs/VocabRef"
@@ -128,8 +393,9 @@
   },
   "required": [
     "profile",
+    "source",
     "vocab",
-    "items"
+    "body"
   ],
   "title": "DocV1",
   "type": "object"

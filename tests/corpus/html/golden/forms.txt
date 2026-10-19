@@ -1,0 +1,22 @@
+<form id="T1" action="/T2/T3" method="post" enctype="multipart/form-data">
+  <label for="T4">T5</label>
+  <input id="T4" type="email" name="T6" required autocomplete="email">
+  <label for="T7">T8</label>
+  <input id="T7" type="number" name="T7" min="T9" step="T10">
+  <input type="hidden" name="T11" value="T12">
+  <select name="T13" form="T1">
+    <option value="T14" selected>T15</option>
+  </select>
+  <textarea name="T16" rows="T17">T18</textarea>
+  <button type="submit" formaction="/T2/T19" class="btn btn-success">T20</button>
+  <datalist id="T21">
+    <option value="T22"></option>
+  </datalist>
+  <input list="T21" name="T23">
+  <output for="T7">T9</output>
+  <fieldset>
+    <legend>T24</legend>
+  </fieldset>
+</form>
+<p id="T25" headers="T26">T27</p>
+<p aria-labelledby="T4 T7" aria-describedby="T28">T29</p>

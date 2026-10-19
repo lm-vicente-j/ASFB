@@ -7,10 +7,12 @@ import pytest
 from pydantic import ValidationError
 
 from asfb.schema import SCHEMA_RESOURCE
-from asfb.schema.doc import DocV1, Profile
+from asfb.schema.doc import DocV1, Profile, SourceKind
 
-BASE: dict[str, Any] = {"profile": "strict", "vocab": [], "items": []}
+BASE: dict[str, Any] = {"profile": "strict", "source": "html", "vocab": [], "body": []}
 SAMPLE_ID = "t_0123456789abcdef"
+JSON_TYPES = frozenset({"string", "object", "integer", "boolean", "array", "null"})
+DEF_PREFIX = "#/$defs/"
 
 
 def _parse(payload: dict[str, Any]) -> DocV1:
@@ -41,11 +43,18 @@ def test_committed_schema_bytes_are_canonical() -> None:
 
 
 def test_schema_walk_is_closed() -> None:
-    strings = objects = integers = 0
-    for node in _nodes(json.loads(_committed())):
+    schema = json.loads(_committed())
+    defs = schema["$defs"]
+    strings = objects = integers = refs = 0
+    for node in _nodes(schema):
         kinds = node.get("type", [])
         kinds = [kinds] if isinstance(kinds, str) else kinds
+        assert set(kinds) <= JSON_TYPES, node
         assert "number" not in kinds, node
+        if "$ref" in node:
+            refs += 1
+            assert node["$ref"].startswith(DEF_PREFIX), node
+            assert node["$ref"].removeprefix(DEF_PREFIX) in defs, node
         if "string" in kinds:
             strings += 1
             assert {"pattern", "const", "enum"} & node.keys(), node
@@ -59,10 +68,11 @@ def test_schema_walk_is_closed() -> None:
     assert strings > 0
     assert objects > 0
     assert integers > 0
+    assert refs > 0
 
 
 def test_accepts_base_document() -> None:
-    assert _parse(BASE) == DocV1(profile=Profile.STRICT, vocab=(), items=())
+    assert _parse(BASE) == DocV1(profile=Profile.STRICT, source=SourceKind.HTML, vocab=(), body=())
 
 
 def test_rejects_extra_fields() -> None:
@@ -79,20 +89,26 @@ def test_rejects_other_schema_ids(schema_id: str) -> None:
 @pytest.mark.parametrize(
     "payload",
     [
-        {**BASE, "items": ["hello"]},
-        {**BASE, "items": ["t_0123456789ABCDEF"]},
-        {**BASE, "items": [1.0]},
-        {**BASE, "items": [2**31]},
-        {**BASE, "items": [-1]},
-        {**BASE, "items": [None]},
-        {**BASE, "items": ["1"]},
+        {**BASE, "body": ["hello"]},
+        {**BASE, "body": [SAMPLE_ID]},
+        {**BASE, "body": [1.0]},
+        {**BASE, "body": [2**31]},
+        {**BASE, "body": [-1]},
+        {**BASE, "body": [None]},
+        {**BASE, "body": [True]},
+        {**BASE, "body": ["1"]},
+        {**BASE, "body": [{"kind": "text", "text": "t_0123456789ABCDEF"}]},
+        {**BASE, "body": [{"kind": "text", "text": "hello"}]},
+        {**BASE, "body": [{"kind": "text", "text": SAMPLE_ID, "extra": 1}]},
+        {**BASE, "body": [{"kind": "script", "text": SAMPLE_ID}]},
+        {**BASE, "items": []},
         {**BASE, "profile": "STRICT"},
+        {**BASE, "source": "htm"},
+        {**BASE, "source": None},
         {**BASE, "vocab": [{"id": "test.stub", "version": "1"}]},
         {**BASE, "vocab": [{"id": "test.stub", "version": 0}]},
         {**BASE, "vocab": [{"id": "test.stub", "version": 65536}]},
         {**BASE, "vocab": [{"id": "test.stub", "version": True}]},
-        {**BASE, "items": [{"scheme": "log2", "index": True}]},
-        {**BASE, "items": [{"scheme": "log2", "index": 65}]},
     ],
 )
 def test_rejects_free_values_and_coercion(payload: dict[str, Any]) -> None:
@@ -100,19 +116,45 @@ def test_rejects_free_values_and_coercion(payload: dict[str, Any]) -> None:
         _parse(payload)
 
 
-def test_accepts_token_and_bool_and_int_leaves_from_json() -> None:
-    raw = json.dumps({**BASE, "items": [SAMPLE_ID, True, False, 0, 7]})
+def test_missing_source_is_rejected() -> None:
+    payload = {key: value for key, value in BASE.items() if key != "source"}
+    with pytest.raises(ValidationError):
+        _parse(payload)
+
+
+def test_accepts_text_and_element_nodes_from_json() -> None:
+    raw = json.dumps(
+        {
+            **BASE,
+            "body": [
+                {"kind": "text", "text": SAMPLE_ID},
+                {
+                    "kind": "element",
+                    "tag": {"vocab": "test.stub", "term": "btn"},
+                    "attrs": [],
+                    "children": [{"kind": "text", "text": SAMPLE_ID}],
+                },
+            ],
+        }
+    )
     doc = DocV1.model_validate_json(raw, strict=True)
-    assert doc.items == (SAMPLE_ID, True, False, 0, 7)
-    assert type(doc.items[1]) is bool
-    assert type(doc.items[3]) is int
+    assert len(doc.body) == 2
+    assert doc.body[0].kind == "text"
+    assert doc.body[1].kind == "element"
 
 
 def test_python_mode_requires_tuples_for_collections() -> None:
-    lists: dict[str, Any] = {"profile": Profile.STRICT, "vocab": [], "items": []}
+    lists: dict[str, Any] = {
+        "profile": Profile.STRICT,
+        "source": SourceKind.HTML,
+        "vocab": [],
+        "body": [],
+    }
     with pytest.raises(ValidationError) as info:
         DocV1.model_validate(lists)
-    assert {error["loc"] for error in info.value.errors()} == {("vocab",), ("items",)}
-    doc = DocV1.model_validate({"profile": Profile.STRICT, "vocab": (), "items": ()})
+    assert {error["loc"] for error in info.value.errors()} == {("vocab",), ("body",)}
+    doc = DocV1.model_validate(
+        {"profile": Profile.STRICT, "source": SourceKind.HTML, "vocab": (), "body": ()}
+    )
     assert doc.vocab == ()
-    assert doc.items == ()
+    assert doc.body == ()

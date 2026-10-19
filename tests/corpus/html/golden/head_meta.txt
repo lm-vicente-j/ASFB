@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="T1" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="T2">
+    <meta http-equiv="x-ua-compatible" content="T3">
+    <meta name="description" content="T4">
+    <title>T5</title>
+    <link rel="stylesheet" href="/T6/T7">
+    <link rel="icon" href="https://T8/T9" type="T10">
+    <base href="https://T11/T12/">
+  </head>
+  <body></body>
+</html>

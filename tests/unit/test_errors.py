@@ -15,6 +15,27 @@ def test_code_values_equal_names(code: ErrorCode) -> None:
     assert code.value == code.name
 
 
+M1_CODES = {
+    "E_SOURCE_UNSUPPORTED",
+    "E_SOURCE_READ",
+    "E_SOURCE_SIZE",
+    "E_SOURCE_DECODE",
+    "E_HTML_PARSE",
+    "E_HTML_DEPTH",
+    "E_HTML_NODES",
+    "E_HTML_ATTRS",
+    "E_VOCAB_DATA",
+    "E_PROFILE",
+    "E_PROFILE_KEY",
+    "E_VIEW",
+    "E_INTERNAL",
+}
+
+
+def test_m1_codes_are_defined() -> None:
+    assert M1_CODES <= {code.value for code in ErrorCode}
+
+
 def test_str_and_args_are_code_only() -> None:
     error = AsfbError(ErrorCode.E_TOKEN_ENCODING)
     assert str(error) == "E_TOKEN_ENCODING"

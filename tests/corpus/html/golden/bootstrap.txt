@@ -1,0 +1,24 @@
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">T1</h5>
+          <p class="card-text text-muted">T2</p>
+          <a href="T3" class="btn btn-primary">T4</a>
+          <button type="button" class="btn btn-outline-secondary btn-sm">T5</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <nav class="navbar navbar-expand-lg bg-body-tertiary">
+    <ul class="navbar-nav d-flex justify-content-between align-items-center">
+      <li class="nav-item">
+        <a class="nav-link active" aria-current="page" href="/T6">T7</a>
+      </li>
+    </ul>
+  </nav>
+  <div class="alert alert-warning d-flex" role="alert">T8</div>
+  <span class="badge text-bg-secondary">T9</span>
+  <div class="d-none d-md-block mt-3 p-2 border rounded T10">T11</div>
+</div>

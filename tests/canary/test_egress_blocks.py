@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from pydantic import SerializerFunctionWrapHandler, model_serializer
@@ -6,8 +6,10 @@ from pydantic import SerializerFunctionWrapHandler, model_serializer
 from asfb.egress.gate import emit
 from asfb.errors import EgressError, ErrorCode
 from asfb.sanitize.tokens import tokenize
-from asfb.schema.doc import DocV1, Profile, VocabRef
+from asfb.schema.doc import DocV1, Profile, SourceKind, VocabRef
+from asfb.schema.html import Element, Text
 from asfb.types.key import SessionKey
+from asfb.types.token import Token
 from asfb.types.untrusted import Untrusted
 from asfb.types.values import EnumValue
 from tests.canary.harness import find_leaks, new_canary
@@ -50,8 +52,10 @@ def test_raw_str_leaf_via_model_construct_is_refused(
     caplog: pytest.LogCaptureFixture, capfd: pytest.CaptureFixture[str]
 ) -> None:
     canary = new_canary()
-    raw_items: tuple[Any, ...] = (canary,)
-    doc = DocV1.model_construct(profile=Profile.STRICT, vocab=(STUB_REF,), items=raw_items)
+    raw_body: tuple[Any, ...] = (Text.model_construct(kind="text", text=cast(Token, canary)),)
+    doc = DocV1.model_construct(
+        profile=Profile.STRICT, source=SourceKind.HTML, vocab=(STUB_REF,), body=raw_body
+    )
     _assert_blocked(doc, ErrorCode.E_EGRESS_SCHEMA, [canary], caplog, capfd)
 
 
@@ -60,7 +64,12 @@ def test_enum_term_canary_is_refused(
 ) -> None:
     canary = new_canary()
     term = EnumValue(vocab=STUB_VOCAB.id, term=canary)
-    doc = DocV1(profile=Profile.STRICT, vocab=(STUB_REF,), items=(term,))
+    doc = DocV1(
+        profile=Profile.STRICT,
+        source=SourceKind.HTML,
+        vocab=(STUB_REF,),
+        body=(Element(tag=term),),
+    )
     _assert_blocked(doc, ErrorCode.E_EGRESS_VOCAB, [canary], caplog, capfd)
 
 
@@ -71,8 +80,9 @@ def test_canary_inside_vocab_id_is_refused(
     vocab_id = canary.lower().replace("_", ".")
     doc = DocV1(
         profile=Profile.STRICT,
+        source=SourceKind.HTML,
         vocab=(VocabRef(id=vocab_id, version=1),),
-        items=(EnumValue(vocab=vocab_id, term="btn"),),
+        body=(Element(tag=EnumValue(vocab=vocab_id, term="btn")),),
     )
     _assert_blocked(doc, ErrorCode.E_EGRESS_VOCAB, [canary, vocab_id], caplog, capfd)
 
@@ -84,8 +94,9 @@ def test_vocab_version_mismatch_is_refused(
     token = tokenize(SessionKey.generate(), Untrusted(canary))
     doc = DocV1(
         profile=Profile.STRICT,
+        source=SourceKind.HTML,
         vocab=(VocabRef(id=STUB_VOCAB.id, version=2),),
-        items=(token, EnumValue(vocab=STUB_VOCAB.id, term="btn")),
+        body=(Text(text=token), Element(tag=EnumValue(vocab=STUB_VOCAB.id, term="btn"))),
     )
     _assert_blocked(doc, ErrorCode.E_EGRESS_VOCAB, [canary], caplog, capfd)
 
@@ -98,7 +109,13 @@ def test_subclass_with_leaking_serializer_is_refused(
     class _Leaky(DocV1):
         @model_serializer(mode="wrap")
         def _serialize(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
-            return {"schema_id": "asfb.doc/1", "profile": "strict", "vocab": [], "items": [canary]}
+            return {
+                "schema_id": "asfb.doc/1",
+                "profile": "strict",
+                "source": "html",
+                "vocab": [],
+                "body": [canary],
+            }
 
-    doc = _Leaky(profile=Profile.STRICT, vocab=(), items=())
+    doc = _Leaky(profile=Profile.STRICT, source=SourceKind.HTML, vocab=(), body=())
     _assert_blocked(doc, ErrorCode.E_EGRESS_TYPE, [canary], caplog, capfd)

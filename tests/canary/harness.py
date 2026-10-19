@@ -1,23 +1,24 @@
-"""Canary planting, encoded-variant leak detection and the M0 reference pipeline."""
+"""Canary planting, encoded-variant leak detection, the HTML pipeline and golden renumbering."""
 
 import base64
 import json
+import re
 import secrets
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-from asfb.egress import Emitted, emit
-from asfb.sanitize.tokens import tokenize
-from asfb.schema.doc import DocV1, Profile, VocabRef
+from asfb import sanitize_html
 from asfb.types.key import SessionKey
-from asfb.types.untrusted import Untrusted
-from asfb.types.values import Bucket, EnumValue
-from tests.stubs import STUB_VOCAB
 
 PLACEHOLDER: Final = "@@CANARY@@"
+ENTITY_PLACEHOLDER: Final = "@@CANARY_ENTITIES@@"
 CORPUS: Final = Path(__file__).resolve().parents[1] / "corpus" / "canary" / "carriers.json"
+HTML_CORPUS: Final = (
+    Path(__file__).resolve().parents[1] / "corpus" / "canary" / "html_carriers.json"
+)
+_TOKEN: Final = re.compile(r"t_[0-9a-f]{16}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,13 +31,26 @@ def new_canary() -> str:
     return "cnry_" + secrets.token_hex(8)
 
 
-def load_carriers() -> list[Carrier]:
-    entries: list[dict[str, str]] = json.loads(CORPUS.read_text(encoding="utf-8"))
+def _load(path: Path) -> list[Carrier]:
+    entries: list[dict[str, str]] = json.loads(path.read_text(encoding="utf-8"))
     return [Carrier(id=entry["id"], template=entry["template"]) for entry in entries]
 
 
+def load_carriers() -> list[Carrier]:
+    return _load(CORPUS)
+
+
+def load_html_carriers() -> list[Carrier]:
+    return _load(HTML_CORPUS)
+
+
+def _entities(text: str) -> str:
+    return "".join(f"&#{ord(char)};" for char in text)
+
+
 def plant(template: str, canary: str) -> str:
-    return template.replace(PLACEHOLDER, canary)
+    text = template.replace(ENTITY_PLACEHOLDER, _entities(canary))
+    return text.replace(PLACEHOLDER, canary)
 
 
 def variants(canary: str) -> list[str]:
@@ -62,11 +76,19 @@ def find_leaks(blobs: Iterable[str | bytes], canaries: Iterable[str]) -> list[st
     return leaks
 
 
-def m0_pipeline(text: str, key: SessionKey) -> Emitted:
-    token = tokenize(key, Untrusted(text))
-    doc = DocV1(
-        profile=Profile.STRICT,
-        vocab=(VocabRef(id=STUB_VOCAB.id, version=STUB_VOCAB.version),),
-        items=(token, EnumValue(vocab=STUB_VOCAB.id, term="btn"), Bucket.log2(len(text))),
-    )
-    return emit(doc, vocab={STUB_VOCAB.id: STUB_VOCAB})
+def html_pipeline(html: str, key: SessionKey) -> list[str]:
+    doc = sanitize_html(html, key=key)
+    return [doc.json, str(doc.views.censored())]
+
+
+def renumber(view: str) -> str:
+    """Replace each distinct token by T1, T2, ... in order of first appearance."""
+    numbers: dict[str, str] = {}
+
+    def _number(match: re.Match[str]) -> str:
+        token = match.group(0)
+        if token not in numbers:
+            numbers[token] = f"T{len(numbers) + 1}"
+        return numbers[token]
+
+    return _TOKEN.sub(_number, view)

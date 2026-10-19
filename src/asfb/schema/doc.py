@@ -5,17 +5,18 @@ from typing import Annotated, Literal
 
 from pydantic import Field
 
+from asfb.schema.html import Node
 from asfb.types.base import StrictModel
-from asfb.types.token import Token
-from asfb.types.values import Bucket, EnumValue, VocabId
-
-BoundedInt = Annotated[int, Field(ge=0, le=2**31 - 1)]
-Leaf = Token | EnumValue | Bucket | bool | BoundedInt
+from asfb.types.values import VocabId
 
 
 class Profile(StrEnum):
     STRICT = "strict"
     DIFFABLE = "diffable"
+
+
+class SourceKind(StrEnum):
+    HTML = "html"
 
 
 class VocabRef(StrictModel):
@@ -26,5 +27,6 @@ class VocabRef(StrictModel):
 class DocV1(StrictModel):
     schema_id: Literal["asfb.doc/1"] = "asfb.doc/1"
     profile: Profile
+    source: SourceKind
     vocab: tuple[VocabRef, ...]
-    items: tuple[Leaf, ...]
+    body: Annotated[tuple[Node, ...], Field(max_length=20000)]

@@ -1,0 +1,13 @@
+<div id="T1" class="card shadow-sm" T2="T3" aria-label="T4" role="region" hidden>
+  <a href="https://T5/T6" title="T7" rel="noopener noreferrer" target="_blank">T8</a>
+  <input type="checkbox" checked disabled name="T9" value="T10">
+  <img src="/T11/T12" alt="T13" loading="lazy" width="T14">
+  <select name="T15" autocomplete="off">
+    <option value="T16" selected>T17</option>
+  </select>
+  <p style="T18" onclick="T19" T20="T21">T22</p>
+  <span class="T23 btn btn-outline-secondary">T24</span>
+  <input type="text" name value>
+  <button type="button" dir="rtl" translate="no">T25</button>
+  <p id="T26" title>T27</p>
+</div>

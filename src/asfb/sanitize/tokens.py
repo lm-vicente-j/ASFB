@@ -1,5 +1,6 @@
 """Mint tokens from untrusted text."""
 
+from asfb import normalize
 from asfb.errors import AsfbError, ErrorCode
 from asfb.types.key import SessionKey
 from asfb.types.token import Token
@@ -22,3 +23,7 @@ def tokenize(key: SessionKey, value: Untrusted[str]) -> Token:
     if data is None:
         raise AsfbError(ErrorCode.E_TOKEN_ENCODING)
     return Token("t_" + key.digest(_DOMAIN + data)[:8].hex())
+
+
+def token_for(key: SessionKey, u: Untrusted[str], /) -> Token:
+    return tokenize(key, normalize.value(u))

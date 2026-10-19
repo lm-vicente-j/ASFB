@@ -1,0 +1,194 @@
+[
+  {
+    "id": "html-p-text",
+    "template": "<p>Contact @@CANARY@@ today</p>"
+  },
+  {
+    "id": "html-title-attr",
+    "template": "<p title=\"@@CANARY@@\">x</p>"
+  },
+  {
+    "id": "html-id-attr",
+    "template": "<p id=\"@@CANARY@@\">x</p>"
+  },
+  {
+    "id": "html-class-attr",
+    "template": "<p class=\"note @@CANARY@@\">x</p>"
+  },
+  {
+    "id": "html-href-host",
+    "template": "<a href=\"https://@@CANARY@@.example.com/x\">x</a>"
+  },
+  {
+    "id": "html-href-path",
+    "template": "<a href=\"/files/@@CANARY@@/report\">x</a>"
+  },
+  {
+    "id": "html-href-query",
+    "template": "<a href=\"/search?q=@@CANARY@@\">x</a>"
+  },
+  {
+    "id": "html-href-fragment",
+    "template": "<a href=\"/docs#@@CANARY@@\">x</a>"
+  },
+  {
+    "id": "html-comment",
+    "template": "<!-- note @@CANARY@@ -->"
+  },
+  {
+    "id": "html-script-string",
+    "template": "<script>var ref = \"@@CANARY@@\"; send(ref);</script>"
+  },
+  {
+    "id": "html-style-body",
+    "template": "<style>.@@CANARY@@ { color: red; }</style>"
+  },
+  {
+    "id": "html-style-attr",
+    "template": "<p style=\"color: @@CANARY@@\">x</p>"
+  },
+  {
+    "id": "html-onclick-attr",
+    "template": "<button onclick=\"send('@@CANARY@@')\">x</button>"
+  },
+  {
+    "id": "html-data-name",
+    "template": "<p data-@@CANARY@@=\"v\">x</p>"
+  },
+  {
+    "id": "html-data-value",
+    "template": "<p data-id=\"@@CANARY@@\">x</p>"
+  },
+  {
+    "id": "html-custom-element",
+    "template": "<x-@@CANARY@@>x</x-@@CANARY@@>"
+  },
+  {
+    "id": "html-doctype",
+    "template": "<!DOCTYPE @@CANARY@@>"
+  },
+  {
+    "id": "html-pi",
+    "template": "<?@@CANARY@@ x?>"
+  },
+  {
+    "id": "html-cdata",
+    "template": "<![CDATA[@@CANARY@@]]>"
+  },
+  {
+    "id": "html-entity-encoded",
+    "template": "<p>@@CANARY_ENTITIES@@</p>"
+  },
+  {
+    "id": "html-entity-attr",
+    "template": "<p title=\"@@CANARY_ENTITIES@@\">x</p>"
+  },
+  {
+    "id": "html-mixed-case-tag",
+    "template": "<P Class=\"note\">@@CANARY@@</P>"
+  },
+  {
+    "id": "html-mixed-case-attr",
+    "template": "<p TiTlE=\"@@CANARY@@\">x</p>"
+  },
+  {
+    "id": "html-mixed-case-script",
+    "template": "<SCRIPT>var A = \"@@CANARY@@\";</ScRiPt>"
+  },
+  {
+    "id": "html-mixed-case-href",
+    "template": "<a HREF=\"https://EXAMPLE.com/@@CANARY@@\">x</A>"
+  },
+  {
+    "id": "html-input-type",
+    "template": "<input type=\"@@CANARY@@\">"
+  },
+  {
+    "id": "html-rel-token",
+    "template": "<a rel=\"noopener @@CANARY@@\">x</a>"
+  },
+  {
+    "id": "html-meta-name-content",
+    "template": "<meta name=\"@@CANARY@@\" content=\"@@CANARY@@\">"
+  },
+  {
+    "id": "html-textarea-text",
+    "template": "<textarea>@@CANARY@@</textarea>"
+  },
+  {
+    "id": "html-title-text",
+    "template": "<title>@@CANARY@@</title>"
+  },
+  {
+    "id": "html-alt-attr",
+    "template": "<img alt=\"@@CANARY@@\">"
+  },
+  {
+    "id": "html-placeholder-attr",
+    "template": "<input placeholder=\"@@CANARY@@\">"
+  },
+  {
+    "id": "html-value-attr",
+    "template": "<input value=\"@@CANARY@@\">"
+  },
+  {
+    "id": "html-aria-label-attr",
+    "template": "<button aria-label=\"@@CANARY@@\">x</button>"
+  },
+  {
+    "id": "html-unquoted-title",
+    "template": "<p title=@@CANARY@@>x</p>"
+  },
+  {
+    "id": "html-url-mailto",
+    "template": "<a href=\"mailto:@@CANARY@@\">x</a>"
+  },
+  {
+    "id": "html-url-javascript",
+    "template": "<a href=\"javascript:@@CANARY@@\">x</a>"
+  },
+  {
+    "id": "html-url-protocol-relative",
+    "template": "<a href=\"//@@CANARY@@/x\">x</a>"
+  },
+  {
+    "id": "html-url-userinfo",
+    "template": "<a href=\"https://@@CANARY@@:pw@h/\">x</a>"
+  },
+  {
+    "id": "html-url-schemeless-port",
+    "template": "<a href=\"@@CANARY@@:x\">x</a>"
+  },
+  {
+    "id": "html-url-double-slash-path",
+    "template": "<a href=\"/a//@@CANARY@@\">x</a>"
+  },
+  {
+    "id": "html-srcset-attr",
+    "template": "<img srcset=\"@@CANARY@@ 1x\">"
+  },
+  {
+    "id": "html-srcdoc-attr",
+    "template": "<iframe srcdoc=\"<p>@@CANARY@@</p>\"></iframe>"
+  },
+  {
+    "id": "html-svg-path-data",
+    "template": "<svg><path d=\"@@CANARY@@\"/></svg>"
+  },
+  {
+    "id": "html-conditional-comment",
+    "template": "<!--[if IE]>@@CANARY@@<![endif]-->"
+  },
+  {
+    "id": "html-bare-if-declaration",
+    "template": "<![if IE]>@@CANARY@@<![endif]>"
+  },
+  {
+    "id": "html-doctype-public-id",
+    "template": "<!DOCTYPE html PUBLIC \"@@CANARY@@\">"
+  },
+  {
+    "id": "html-unterminated-attr",
+    "template": "<p title=\"@@CANARY@@>x"
+  }
+]

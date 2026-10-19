@@ -7,12 +7,34 @@ import pytest
 import asfb
 
 SANITIZE = "asfb/sanitize/"
+NORMALIZE = "asfb/normalize/"
 EGRESS = "asfb/egress/"
+INGEST = "asfb/ingest/"
 UNTRUSTED = "asfb/types/untrusted.py"
 UNTRUSTED_MODULE = "asfb.types.untrusted"
 KEY = "asfb/types/key.py"
 EMITTED = "Emitted"
+CENSORED_VIEW = "CensoredView"
+EGRESS_ONLY_NAMES = frozenset({EMITTED, CENSORED_VIEW})
 FORBIDDEN_LOOKUP = "unwrap"
+UNWRAP_ALLOWED = (SANITIZE, NORMALIZE)
+INGEST_FORBIDDEN = (
+    "asfb.schema",
+    "asfb.egress",
+    "asfb.sanitize",
+    "asfb.types.token",
+    "asfb.types.values",
+)
+NORMALIZE_FORBIDDEN = ("asfb.schema", "asfb.egress", "asfb.sanitize", "asfb.ingest")
+TOKENS = "asfb/sanitize/tokens.py"
+TOKENIZE = "tokenize"
+VIEW = "asfb/egress/view.py"
+VIEW_FORBIDDEN = (
+    "asfb.ingest",
+    "asfb.normalize",
+    "asfb.sanitize",
+    "asfb.types.untrusted",
+)
 ATTRIBUTE_LOOKUPS = frozenset({"getattr", "attrgetter"})
 DYNAMIC_IMPORTS = frozenset({"import_module", "__import__"})
 
@@ -83,13 +105,45 @@ def _annotation_nodes(tree: ast.AST) -> frozenset[int]:
     return frozenset(id(child) for root in roots for child in ast.walk(root))
 
 
+def _import_targets(path: str, node: ast.AST) -> list[str]:
+    if isinstance(node, ast.Import):
+        return [alias.name for alias in node.names]
+    if not isinstance(node, ast.ImportFrom):
+        return []
+    if node.level == 0:
+        base = node.module or ""
+    else:
+        package = path.removesuffix(".py").split("/")[:-1]
+        kept = package[: len(package) - (node.level - 1)]
+        base = ".".join([*kept, node.module] if node.module else kept)
+    return [base, *(f"{base}.{alias.name}" for alias in node.names)]
+
+
+def _is_under(module: str, names: tuple[str, ...]) -> bool:
+    return any(module == name or module.startswith(f"{name}.") for name in names)
+
+
 def _violations(path: str, node: ast.AST, annotated: frozenset[int]) -> Iterator[str]:
     name = _reference(node)
     text = _literal(node)
     attribute = node.attr if isinstance(node, ast.Attribute) else None
     if path != UNTRUSTED and (name == "unwrap" or text == "unwrap"):
-        if not path.startswith(SANITIZE):
-            yield "unwrap referenced outside asfb/sanitize"
+        if not path.startswith(UNWRAP_ALLOWED):
+            yield "unwrap referenced outside asfb/sanitize and asfb/normalize"
+    if path.startswith(INGEST) and any(
+        _is_under(target, INGEST_FORBIDDEN) for target in _import_targets(path, node)
+    ):
+        yield "ingest imports a forbidden module"
+    if path.startswith(NORMALIZE) and any(
+        _is_under(target, NORMALIZE_FORBIDDEN) for target in _import_targets(path, node)
+    ):
+        yield "normalize imports a forbidden module"
+    if path != TOKENS and (name == TOKENIZE or text == TOKENIZE):
+        yield "tokenize referenced outside asfb/sanitize/tokens.py"
+    if path == VIEW and any(
+        _is_under(target, VIEW_FORBIDDEN) for target in _import_targets(path, node)
+    ):
+        yield "egress/view.py imports a forbidden module"
     if path != UNTRUSTED and (_is_internal(attribute) or _is_internal(text)):
         yield "untrusted internals used outside untrusted.py"
     if path != KEY and (attribute == "_key" or text == "_key"):
@@ -105,9 +159,9 @@ def _violations(path: str, node: ast.AST, annotated: frozenset[int]) -> Iterator
         yield "gc imported"
     if isinstance(node, ast.Call):
         yield from _lookup_violations(node)
-    if isinstance(node, (ast.Name, ast.Attribute)) and name == EMITTED:
+    if isinstance(node, (ast.Name, ast.Attribute)) and name in EGRESS_ONLY_NAMES:
         if not path.startswith(EGRESS) and id(node) not in annotated:
-            yield "Emitted used outside asfb/egress"
+            yield f"{name} used outside asfb/egress"
 
 
 def scan(sources: Mapping[str, str]) -> list[str]:
@@ -174,6 +228,36 @@ def test_src_respects_architecture() -> None:
         ("asfb/types/token.py", "x = cast(Emitted, value)"),
         ("asfb/types/token.py", "def f(x):\n    return Emitted(x)"),
         ("asfb/vocab/__init__.py", "from asfb.egress import Emitted\nE = Emitted"),
+        ("asfb/ingest/html.py", "x = unwrap(v)"),
+        ("asfb/ingest/html.py", "from asfb.types.untrusted import unwrap"),
+        ("asfb/ingest/html.py", "from asfb.schema import doc"),
+        ("asfb/ingest/source.py", "import asfb.sanitize.tokens"),
+        ("asfb/ingest/html.py", "from asfb.types.values import EnumValue"),
+        ("asfb/ingest/html.py", "from asfb.types.token import Token"),
+        ("asfb/ingest/html.py", "from asfb.types import token"),
+        ("asfb/ingest/html.py", "from asfb import egress"),
+        ("asfb/ingest/source.py", "from ..egress import emit"),
+        ("asfb/ingest/html.py", "from .. import sanitize"),
+        ("asfb/api.py", "x = tokenize(key, value)"),
+        ("asfb/sanitize/html.py", "from asfb.sanitize.tokens import tokenize"),
+        ("asfb/normalize/__init__.py", "x = tokenize(key, value)"),
+        ("asfb/api.py", "view = CensoredView('abc')"),
+        ("asfb/sanitize/html.py", "x = CensoredView(text)"),
+        ("asfb/api.py", "from asfb.egress.view import CensoredView\nv = CensoredView('a')"),
+        ("asfb/egress/view.py", "from asfb.normalize import value"),
+        ("asfb/egress/view.py", "from asfb.sanitize.html import censor_document"),
+        ("asfb/egress/view.py", "from asfb.types.untrusted import Untrusted"),
+        ("asfb/egress/view.py", "from asfb import ingest"),
+        ("asfb/egress/view.py", "from ..ingest.html import parse_html"),
+        ("asfb/egress/view.py", "import asfb.normalize"),
+        ("asfb/api.py", "from typing import cast\nx = cast(CensoredView, s)"),
+        ("asfb/api.py", "V = CensoredView"),
+        ("asfb/sanitize/html.py", "from asfb.egress.view import CensoredView\nV = CensoredView"),
+        ("asfb/normalize/__init__.py", "from asfb.schema import doc"),
+        ("asfb/normalize/__init__.py", "from asfb import ingest"),
+        ("asfb/normalize/__init__.py", "import asfb.sanitize.tokens"),
+        ("asfb/normalize/__init__.py", "from ..egress import emit"),
+        ("asfb/normalize/__init__.py", "from asfb.ingest.html import parse_html"),
     ],
 )
 def test_scanner_flags_violation(path: str, source: str) -> None:
@@ -184,6 +268,14 @@ def test_scanner_flags_violation(path: str, source: str) -> None:
     ("path", "source"),
     [
         ("asfb/sanitize/tokens.py", "from asfb.types.untrusted import unwrap\nx = unwrap(v)"),
+        ("asfb/normalize/__init__.py", "from asfb.types.untrusted import unwrap\nx = unwrap(v)"),
+        (
+            "asfb/ingest/html.py",
+            "from asfb.types.untrusted import Untrusted\nfrom asfb.errors import ErrorCode",
+        ),
+        ("asfb/ingest/source.py", "from asfb.ingest.html import parse_html"),
+        ("asfb/ingest/html.py", "from asfb.types import untrusted"),
+        ("asfb/ingest/source.py", "from . import html\nfrom .limits import MAX_BYTES"),
         ("asfb/types/untrusted.py", "def unwrap(v):\n    return v._value"),
         ("asfb/egress/gate.py", "x = Emitted('abc')"),
         ("asfb/egress/gate.py", "E = Emitted"),
@@ -194,7 +286,21 @@ def test_scanner_flags_violation(path: str, source: str) -> None:
         ("asfb/types/token.py", "f = attrgetter('value')"),
         ("asfb/types/token.py", "import importlib"),
         ("asfb/types/token.py", "from asfb.egress import Emitted"),
+        ("asfb/sanitize/tokens.py", "x = tokenize(key, value)"),
+        ("asfb/sanitize/tokens.py", "def tokenize(key, value):\n    return value"),
+        ("asfb/egress/view.py", "x = CensoredView('a')"),
+        ("asfb/egress/view.py", "from asfb.egress.gate import Emitted, emit"),
+        ("asfb/egress/view.py", "from asfb.types.token import Token"),
+        ("asfb/egress/view.py", "from asfb.vocab import html_registry"),
+        (
+            "asfb/api.py",
+            "from asfb.egress import CensoredView\n"
+            "def f(v: CensoredView) -> CensoredView:\n    return v",
+        ),
         ("asfb/vocab/__init__.py", "x: Emitted | None = None"),
+        ("asfb/api.py", "from asfb.egress import CensoredView\nx: CensoredView | None = None"),
+        ("asfb/normalize/__init__.py", "import unicodedata\nx = unicodedata.normalize('NFC', s)"),
+        ("asfb/normalize/__init__.py", "from asfb.errors import ErrorCode"),
         (
             "asfb/vocab/__init__.py",
             "from asfb.egress import Emitted\ndef f(x: Emitted) -> Emitted:\n    return x",

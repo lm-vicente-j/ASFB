@@ -1,11 +1,12 @@
 """Single exit for documents: validate, check vocabulary and strings, then emit JSON."""
 
 import json
-from collections.abc import Iterator, Mapping
+from collections.abc import Mapping
 from importlib import resources
 from typing import Any, Final, NewType, NoReturn
 
 from jsonschema import Draft202012Validator
+from pydantic import BaseModel
 
 from asfb.errors import EgressError, ErrorCode
 from asfb.schema import SCHEMA_RESOURCE
@@ -17,26 +18,23 @@ from asfb.vocab import VocabRegistry, Vocabulary
 Emitted = NewType("Emitted", str)
 
 
-def _walk_schema(node: object) -> Iterator[tuple[str, object]]:
-    if isinstance(node, dict):
-        for key, value in node.items():
-            yield key, value
-            yield from _walk_schema(value)
-    elif isinstance(node, list):
-        for item in node:
-            yield from _walk_schema(item)
-
-
 def _schema_names(schema: object) -> tuple[frozenset[str], frozenset[str]]:
     keys: set[str] = set()
     words: set[str] = set()
-    for key, value in _walk_schema(schema):
-        if key == "properties" and isinstance(value, dict):
-            keys.update(name for name in value if isinstance(name, str))
-        elif key == "const" and isinstance(value, str):
-            words.add(value)
-        elif key == "enum" and isinstance(value, list):
-            words.update(item for item in value if isinstance(item, str))
+    pending: list[object] = [schema]
+    while pending:
+        node = pending.pop()
+        if isinstance(node, dict):
+            for key, value in node.items():
+                if key == "properties" and isinstance(value, dict):
+                    keys.update(name for name in value if isinstance(name, str))
+                elif key == "const" and isinstance(value, str):
+                    words.add(value)
+                elif key == "enum" and isinstance(value, list):
+                    words.update(item for item in value if isinstance(item, str))
+                pending.append(value)
+        elif isinstance(node, list):
+            pending.extend(node)
     return frozenset(keys), frozenset(words)
 
 
@@ -79,36 +77,56 @@ def _declare(model: DocV1, vocab: VocabRegistry) -> dict[str, Vocabulary] | None
         ):
             return None
         declared[ref.id] = entry
-    for leaf in model.items:
-        if isinstance(leaf, EnumValue) and (
-            leaf.vocab not in declared or leaf.term not in declared[leaf.vocab]
-        ):
-            return None
+    pending: list[object] = [model.body]
+    while pending:
+        node = pending.pop()
+        if isinstance(node, EnumValue):
+            if node.vocab not in declared or node.term not in declared[node.vocab]:
+                return None
+        elif isinstance(node, BaseModel):
+            pending.extend(vars(node).values())
+        elif isinstance(node, tuple):
+            pending.extend(node)
     return declared
 
 
+def _word_ok(node: str, declared: Mapping[str, Vocabulary]) -> bool:
+    return (
+        SHAPE_RE.fullmatch(node) is not None
+        or node in _WORDS
+        or node in declared
+        or any(node in vocab for vocab in declared.values())
+    )
+
+
 def _strings_ok(node: object, declared: Mapping[str, Vocabulary]) -> bool:
-    if isinstance(node, dict):
-        return all(
-            isinstance(key, str) and key in _KEYS and _strings_ok(value, declared)
-            for key, value in node.items()
-        )
-    if isinstance(node, list):
-        return all(_strings_ok(item, declared) for item in node)
-    if isinstance(node, bool) or type(node) is int:
-        return True
-    if isinstance(node, str):
-        return (
-            SHAPE_RE.fullmatch(node) is not None
-            or node in _WORDS
-            or node in declared
-            or any(node in vocab for vocab in declared.values())
-        )
-    return False
+    pending: list[object] = [node]
+    while pending:
+        current = pending.pop()
+        if current is None or isinstance(current, bool) or type(current) is int:
+            continue
+        if isinstance(current, dict):
+            if not all(isinstance(key, str) and key in _KEYS for key in current):
+                return False
+            pending.extend(current.values())
+        elif isinstance(current, list):
+            pending.extend(current)
+        elif isinstance(current, str):
+            if not _word_ok(current, declared):
+                return False
+        else:
+            return False
+    return True
+
+
+def _dump(model: DocV1) -> str:
+    # model_dump_json stops near 48 elements (pydantic-core depth guard); the dict form does not.
+    plain = model.model_dump(mode="json", warnings="error")
+    return json.dumps(plain, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
 
 
 def _reserializes(model: DocV1, raw: str) -> bool:
-    return model.model_dump_json(warnings="error") == raw
+    return _dump(model) == raw
 
 
 def _check(doc: object, vocab: VocabRegistry) -> ErrorCode | str:
@@ -117,7 +135,7 @@ def _check(doc: object, vocab: VocabRegistry) -> ErrorCode | str:
         if type(doc) is not DocV1:
             return stage
         stage = ErrorCode.E_EGRESS_SERIALIZE
-        raw = doc.model_dump_json(warnings="error")
+        raw = _dump(doc)
         stage = ErrorCode.E_EGRESS_SCHEMA
         model = DocV1.model_validate_json(raw, strict=True)
         stage = ErrorCode.E_EGRESS_JSONSCHEMA

@@ -1,0 +1,6 @@
+<h1>Welcome, Ana García</h1>
+<form class="send-invoice" action="/invoices/send">
+  <input type="email" name="email" value="ana@example.com">
+  <button type="submit" class="btn btn-primary">Send invoice</button>
+</form>
+<script>function sendInvoice(email) { fetch("/invoices/send"); }</script>

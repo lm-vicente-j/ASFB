@@ -10,8 +10,8 @@ from asfb.types.key import SessionKey
 from tests.canary.harness import (
     Carrier,
     find_leaks,
+    html_pipeline,
     load_carriers,
-    m0_pipeline,
     new_canary,
     plant,
 )
@@ -34,9 +34,9 @@ def test_carrier_gives_zero_leaks(
 ) -> None:
     canary = new_canary()
     key = SessionKey.generate()
-    out = m0_pipeline(plant(carrier.template, canary), key)
+    out = html_pipeline(f"<p>{plant(carrier.template, canary)}</p>", key)
     captured = capfd.readouterr()
-    assert find_leaks([out, caplog.text, captured.out, captured.err], [canary]) == []
+    assert find_leaks([*out, caplog.text, captured.out, captured.err], [canary]) == []
 
 
 @settings(deadline=None)
@@ -56,10 +56,10 @@ def test_canary_at_random_offset_does_not_leak(
     root.addHandler(sink)
     try:
         with redirect_stdout(stdout), redirect_stderr(stderr):
-            out = m0_pipeline(before + canary + after, SessionKey(key_bytes))
+            out = html_pipeline(before + canary + after, SessionKey(key_bytes))
             print(out)  # noqa: T201
             logging.getLogger("asfb.canary").warning("emitted=%s", out)
     finally:
         root.removeHandler(sink)
     captured = [stdout.getvalue(), stderr.getvalue(), *sink.lines]
-    assert find_leaks([out, *captured], [canary]) == []
+    assert find_leaks([*out, *captured], [canary]) == []

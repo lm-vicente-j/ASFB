@@ -1,0 +1,6 @@
+<style>T1</style>
+<script>T2</script>
+<script type="module" src="/T3/T4"></script>
+<script type="application/json">T5</script>
+<script>T6</script>
+<style media="T7">T8</style>
