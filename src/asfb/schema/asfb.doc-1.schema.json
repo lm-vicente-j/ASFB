@@ -1,0 +1,136 @@
+{
+  "$defs": {
+    "Bucket": {
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "maximum": 64,
+          "minimum": 0,
+          "title": "Index",
+          "type": "integer"
+        },
+        "scheme": {
+          "$ref": "#/$defs/BucketScheme"
+        }
+      },
+      "required": [
+        "scheme",
+        "index"
+      ],
+      "title": "Bucket",
+      "type": "object"
+    },
+    "BucketScheme": {
+      "enum": [
+        "log2"
+      ],
+      "title": "BucketScheme",
+      "type": "string"
+    },
+    "EnumValue": {
+      "additionalProperties": false,
+      "properties": {
+        "term": {
+          "pattern": "^[!-~]{1,64}$",
+          "title": "Term",
+          "type": "string"
+        },
+        "vocab": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9]*(\\.[a-z0-9]+)*$",
+          "title": "Vocab",
+          "type": "string"
+        }
+      },
+      "required": [
+        "vocab",
+        "term"
+      ],
+      "title": "EnumValue",
+      "type": "object"
+    },
+    "Profile": {
+      "enum": [
+        "strict",
+        "diffable"
+      ],
+      "title": "Profile",
+      "type": "string"
+    },
+    "VocabRef": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9]*(\\.[a-z0-9]+)*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "version": {
+          "maximum": 65535,
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "title": "VocabRef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "items": {
+      "items": {
+        "anyOf": [
+          {
+            "pattern": "^t_[0-9a-f]{16}$",
+            "type": "string"
+          },
+          {
+            "$ref": "#/$defs/EnumValue"
+          },
+          {
+            "$ref": "#/$defs/Bucket"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "maximum": 2147483647,
+            "minimum": 0,
+            "type": "integer"
+          }
+        ]
+      },
+      "title": "Items",
+      "type": "array"
+    },
+    "profile": {
+      "$ref": "#/$defs/Profile"
+    },
+    "schema_id": {
+      "const": "asfb.doc/1",
+      "default": "asfb.doc/1",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "vocab": {
+      "items": {
+        "$ref": "#/$defs/VocabRef"
+      },
+      "title": "Vocab",
+      "type": "array"
+    }
+  },
+  "required": [
+    "profile",
+    "vocab",
+    "items"
+  ],
+  "title": "DocV1",
+  "type": "object"
+}

@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "asfb"
+version = "0.1.0.dev0"
+description = "Show the agent what is public. Censor what is yours."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["pydantic>=2.9,<3", "jsonschema>=4.23"]
+
+[dependency-groups]
+dev = ["pytest>=8.3", "hypothesis>=6.100", "ruff>=0.8", "mypy>=1.13", "types-jsonschema"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/asfb"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["tests/parity"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SLF", "T20", "BLE", "PT", "RUF"]
+per-file-ignores = { "tests/**" = ["S101", "S301", "S403"] }
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+mypy_path = "src"
+files = ["src", "tests"]
+exclude = ["^tests/parity/"]
+plugins = ["pydantic.mypy"]
+warn_unreachable = true
+enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+# tests/parity needs the ASFB tool; run it explicitly with its path
+testpaths = ["tests/unit", "tests/property", "tests/canary"]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+xfail_strict = true
+filterwarnings = ["error"]
