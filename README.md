@@ -57,6 +57,8 @@ What the agent reads with the `strict` profile and a per-session key. **Illustra
 
 Public content passes: tags, attribute names, standard values (`type="email"`), Bootstrap classes (`btn btn-primary`) and Web APIs (`fetch`). User content becomes tokens: the heading, custom class, URL path, field name, value, button text, function name and string. `email` gets the same token in the form and in the script, so the agent can link them. The view is rendered from a closed, versioned schema (`asfb.doc/1`).
 
+**M1 note.** The HTML sanitizer turns the whole content of `<script>` and `<style>` into one token, so today the script line reads `<script>t_…</script>`, and `email` is not linked between the form and the script. Censoring JavaScript names and strings while `fetch` stays visible arrives with code support.
+
 ---
 
 ## How the agent reads and writes
@@ -74,12 +76,21 @@ Originals and the token → original map never leave the machine.
 
 | Source | Visible (public) | Censored (user content) |
 |---|---|---|
-| HTML | Tags, attribute names, standard attribute values, public framework classes (e.g. Bootstrap) | Text, custom class and id names, URLs, form values, script names and strings |
+| HTML | Tags, attribute names, standard attribute values, public framework classes (e.g. Bootstrap), URL schemes and URL shape | Text, custom element, attribute, class and id names, URL hosts, paths, queries and fragments, form values, comments, script and style contents |
 | Code | Syntax, keywords, builtins, standard library and public dependency APIs | User-defined names, strings, comments, file names |
 | Markdown | Headings, lists, tables, code blocks | Text, URLs, alt text |
 | Text (`.txt`) | Lines and paragraphs | All text |
 | Logs | Levels, timestamp buckets, standard fields | Messages, custom fields and values |
 | Databases | Schema structure, column types | Table and column names, values |
+
+The HTML sanitizer (M1) runs ingest, normalize, sanitize, schema and egress, in that order:
+
+- **Input.** One `.html` or `.htm` file, or a string. UTF-8 only. At most 1,048,576 bytes, 64 levels of element nesting, 20,000 nodes and 64 attributes per element; for a repeated attribute the first one wins. Anything larger is refused with a static error code.
+- **Public terms.** Known element and attribute names, listed values of enumerated attributes (such as `type`, `method`, `rel`, `dir` and `role`), URL schemes and Bootstrap classes stay visible. They come from the vocabularies `html.elements`, `html.attributes`, `html.values`, `url.schemes` and `css.bootstrap` (a curated subset of Bootstrap 5.3 classes), all version 1, in `src/asfb/vocab/data/`. Enumerated values match exactly or ASCII case-insensitively.
+- **Tokens.** Other element and attribute names (custom elements, `data-*`) become tokens. Each text node, comment, CDATA section, declaration and processing instruction becomes one token, and so does the whole text of `<script>`, `<style>`, `<title>` and `<textarea>`. Whitespace-only text is dropped.
+- **Attribute values.** `class`, `id`, `name`, `for`, `headers` and similar attributes get one token per space-separated part, so `for="email"` links to `id="email"`; Bootstrap classes stay visible. Other values, including `style`, `srcset` and `on*` handlers, become one token. An attribute with no value or an empty value prints bare.
+- **URLs.** In `href`, `src`, `action`, `formaction`, `cite`, `poster`, `data` and `background`, an `http`, `https`, `ws`, `wss`, `ftp`, `file` or scheme-less URL keeps its shape: the host, each path segment, the query and the fragment become one token each, as in `/t_…/t_…?t_…#t_…`. For `mailto`, `tel`, `data`, `javascript` and `blob`, everything after the scheme is one token. Any other URL is one token.
+- **Other.** The doctype only shows whether it is `<!DOCTYPE html>`. Character references are decoded before tokenizing.
 
 ---
 
@@ -103,7 +114,8 @@ Limits:
 - **Not zero information.** Public content, structure, approximate length, frequency and order still reveal information. Quantization and caps reduce this; they do not remove it.
 - **Classification errors.** User content wrongly treated as public leaks. The public vocabulary is versioned and allowlist-only to keep this small.
 - **No semantics.** No summaries, topic classification, or natural-language or intent detection.
-- **Parser bugs.** A bug in a parser or decoder can break a guarantee. That is why there is process isolation and a single egress gate.
+- **Parser bugs.** A bug in a parser or decoder can break a guarantee. That is why there is a single egress gate, and why parsing is meant to run in an isolated worker. The worker is not built yet: M1 parses HTML in the calling process, bounded by the input limits, with no CPU, memory or time limit.
+- **Parser versions.** HTML is parsed with Python's `html.parser`. Its handling of malformed input differs between Python versions: the same file can give a different tree on 3.12 and 3.14, and an unclosed construct such as an attribute quote can drop the rest of the file.
 - **No content certification.** Passing censorship does not mean the source is safe or trustworthy.
 
 ---
@@ -112,7 +124,7 @@ Limits:
 
 Three metrics, tracked in CI:
 
-- **Leak rate.** Canary values planted in a test corpus must never appear in any output. Target: zero. Each canary is `cnry_` plus 16 random hex digits, fresh for each test, planted in the templates of `tests/corpus/canary/carriers.json`.
+- **Leak rate.** Canary values planted in a test corpus must never appear in any output. Target: zero. Each canary is `cnry_` plus 16 random hex digits, fresh for each test, planted in the templates of `tests/corpus/canary/carriers.json` and `tests/corpus/canary/html_carriers.json`.
 - **Task success.** Share of agent tasks solved with the censored view, compared with the original source.
 - **Token cost.** Tokens the model spends per task with the censored view, compared with the original source.
 
@@ -161,7 +173,7 @@ Gemini 4 Argon has no public API id yet (Google showed it to a restricted group 
 
 ## Planned usage
 
-All interfaces are **planned**.
+The Python API for HTML is available since M1. The CLI and the MCP server are **planned**.
 
 ```python
 import asfb
@@ -169,6 +181,8 @@ import asfb
 doc = asfb.sanitize("page.html", profile="strict")
 print(doc.views.censored())
 ```
+
+`asfb.sanitize(path, *, profile="strict", key=None)` reads a `.html` or `.htm` file. `asfb.sanitize_html(text, *, profile="strict", key=None)` takes a string. Without `key`, each call creates a new session key; pass the same `asfb.SessionKey` to get equal tokens across calls. `profile="diffable"` requires a caller-supplied key; the `diff` tool is not built yet. `doc.json` is the emitted `asfb.doc/1` JSON. `doc.views.censored()` is HTML-like text printed from that JSON: tokens, vocabulary terms and tag syntax, indented two spaces per level, with void elements without an end tag. Errors raise `asfb.AsfbError` with a static code.
 
 ```text
 asfb sanitize page.html --profile strict
@@ -192,10 +206,10 @@ MCP server tools:
 2. **Closed output schema.** Pydantic v2 models with `extra="forbid"`. Only enums, bounded integers, booleans, tokens and public vocabulary. No free `str` from the source. The first bucket scheme is `log2`: the index is the bit length of a non-negative integer (0 to 64).
 3. **Taint typing.** Source text lives in `Untrusted[str]` and can only become a `Token`, `Bucket` or `EnumValue` through sanitizer functions. Checked with strict mypy; **Python gives no compile-time guarantee**.
 4. **Defense in depth.** A single egress gate (`egress.emit()`) revalidates every output against JSON Schema and rejects any string that is neither public vocabulary nor a token. It fails closed, with no partial output.
-5. **Process isolation.** Parsing and sanitizing run in a worker with no network and no writes, with size, depth, CPU and memory limits. Only validated JSON crosses the boundary.
+5. **Process isolation.** Parsing and sanitizing run in a worker with no network and no writes, with size, depth, CPU and memory limits. Only validated JSON crosses the boundary. The worker is not built yet; see [Guarantees and limits](#guarantees-and-limits).
 6. **Local vault.** Originals and the token → original map stay on the machine.
 7. **Content-free logs and exceptions.** Static codes, no local variables in tracebacks.
-8. **Determinism.** Same input and same key give the same tokens (HMAC-SHA256, 256-bit key, per session by default). A token is `t_` plus the first 16 lowercase hex digits of the HMAC of `asfb.token/1`, a NUL byte and the UTF-8 bytes of the value, with no extra normalization. There is no per-context salt: under one key, a value gets the same token everywhere. The session key is 32 bytes from `secrets.token_bytes`, kept only in process memory.
+8. **Determinism.** Same input and same key give the same tokens (HMAC-SHA256, 256-bit key, per session by default). A token is `t_` plus the first 16 lowercase hex digits of the HMAC of `asfb.token/1`, a NUL byte and the UTF-8 bytes of the normalized value. Normalization removes format characters (bidi marks, zero-width characters, BOM, soft hyphen) and control characters except TAB, LF and CR, turns CR and CRLF into LF, applies NFC and strips outer ASCII whitespace. There is no per-context salt: under one key, a value gets the same token everywhere. The session key is 32 bytes from `secrets.token_bytes`, kept only in process memory.
 
 ---
 
