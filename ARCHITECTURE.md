@@ -105,9 +105,9 @@ Source text lives in `Untrusted[str]`. It can only become a `Token`, `Bucket` or
 The output contains only these kinds of value:
 
 - **Tokens**: keyed pseudonyms (`t_…` in the examples).
-- **Buckets**: `Bucket` values, such as timestamp buckets in logs.
-- **Enum values**: `EnumValue`. The README lists log levels among the visible log content.
-- **Public vocabulary**: versioned, allowlist-only.
+- **Buckets**: `Bucket` values, such as timestamp buckets in logs. The first bucket scheme is `log2`: the index is the bit length of a non-negative integer (0 to 64).
+- **Enum values**: `EnumValue`, a vocabulary id plus a term. The README lists log levels among the visible log content.
+- **Public vocabulary**: versioned, allowlist-only. Each vocabulary has an id made of lowercase letters and digits, separated by dots, and an integer version (1 to 65535). A document lists the id and version of each vocabulary it uses, and egress rejects unknown ids, version mismatches and terms that are not in the declared vocabulary. Terms are 1 to 64 printable ASCII characters, without spaces.
 
 ### Closed schema
 
@@ -115,6 +115,7 @@ The output schema is a closed, versioned schema, identified as `asfb.doc/1`.
 
 - Pydantic v2 models with `extra="forbid"`.
 - Only enums, bounded integers, booleans, tokens and public vocabulary. No free `str` from the source.
+- The JSON Schema is committed as `src/asfb/schema/asfb.doc-1.schema.json`. Egress validates every output against it with `jsonschema`.
 
 ### Views and profiles
 
@@ -134,7 +135,10 @@ The README names two profiles:
 - Tokens are **HMAC-SHA256** values with a **256-bit key**. The key is per session by default.
 - Tokens are **deterministic**: under one key, the same value always gives the same token. This is how the agent follows references.
 - With the `strict` profile, tokens are not comparable across sessions.
-- Tokens are hexadecimal strings. The README examples show them with a `t_` prefix, such as `t_4a7d…`.
+- A token is `t_` plus the first 16 lowercase hex digits of the HMAC (pattern `^t_[0-9a-f]{16}$`).
+- The HMAC is computed over `asfb.token/1`, a NUL byte and the UTF-8 bytes of the value, with no extra normalization. There is no per-context salt: under one key, a value gets the same token everywhere.
+- Tokens are minted by `tokenize()` in `sanitize/`. A value that cannot be encoded as UTF-8 is rejected with the static code `E_TOKEN_ENCODING`.
+- The session key is 32 bytes from `secrets.token_bytes`, kept only in process memory. It is a `SessionKey` object in `types/` that never hands out its bytes, cannot be pickled and has a redacted repr.
 
 ---
 
@@ -202,14 +206,14 @@ asfb sanitize ./src --profile strict
 
 ### Design principles
 
-1. **Allowlist, never blocklist.** Only what is in a versioned public vocabulary (languages, web standards, frameworks such as Bootstrap) passes; everything else is censored.
-2. **Closed output schema.** Pydantic v2 models with `extra="forbid"`. Only enums, bounded integers, booleans, tokens and public vocabulary. No free `str` from the source.
+1. **Allowlist, never blocklist.** Only what is in a versioned public vocabulary (languages, web standards, frameworks such as Bootstrap) passes; everything else is censored. Each vocabulary has an id made of lowercase letters and digits, separated by dots, and an integer version (1 to 65535). A document lists the id and version of each vocabulary it uses, and egress rejects unknown ids, version mismatches and terms that are not in the declared vocabulary. Terms are 1 to 64 printable ASCII characters, without spaces.
+2. **Closed output schema.** Pydantic v2 models with `extra="forbid"`. Only enums, bounded integers, booleans, tokens and public vocabulary. No free `str` from the source. The first bucket scheme is `log2`: the index is the bit length of a non-negative integer (0 to 64).
 3. **Taint typing.** Source text lives in `Untrusted[str]` and can only become a `Token`, `Bucket` or `EnumValue` through sanitizer functions. Checked with strict mypy; **Python gives no compile-time guarantee**.
 4. **Defense in depth.** A single egress gate (`egress.emit()`) revalidates every output against JSON Schema and rejects any string that is neither public vocabulary nor a token. It fails closed, with no partial output.
 5. **Process isolation.** Parsing and sanitizing run in a worker with no network and no writes, with size, depth, CPU and memory limits. Only validated JSON crosses the boundary.
 6. **Local vault.** Originals and the token → original map stay on the machine.
 7. **Content-free logs and exceptions.** Static codes, no local variables in tracebacks.
-8. **Determinism.** Same input and same key give the same tokens (HMAC-SHA256, 256-bit key, per session by default).
+8. **Determinism.** Same input and same key give the same tokens (HMAC-SHA256, 256-bit key, per session by default). A token is `t_` plus the first 16 lowercase hex digits of the HMAC of `asfb.token/1`, a NUL byte and the UTF-8 bytes of the value, with no extra normalization. There is no per-context salt: under one key, a value gets the same token everywhere. The session key is 32 bytes from `secrets.token_bytes`, kept only in process memory.
 
 ### Guarantees
 
@@ -238,7 +242,7 @@ The intended guarantee: **no user content from the source appears in the output,
 
 Three metrics, tracked in CI:
 
-- **Leak rate.** Canary values planted in a test corpus must never appear in any output. Target: zero.
+- **Leak rate.** Canary values planted in a test corpus must never appear in any output. Target: zero. Each canary is `cnry_` plus 16 random hex digits, fresh for each test, planted in the templates of `tests/corpus/canary/carriers.json`.
 - **Task success.** Share of agent tasks solved with the censored view, compared with the original source.
 - **Token cost.** Tokens the model spends per task with the censored view, compared with the original source.
 
@@ -344,25 +348,23 @@ ASFB/
 
 - Python >= 3.12.
 - Windows, Linux or macOS.
-- Planned stack: pydantic v2, pytest, hypothesis, ruff, mypy `--strict`.
+- Planned stack: pydantic v2, jsonschema (egress check against the committed JSON Schema), pytest, hypothesis, ruff, mypy `--strict`.
 
 ---
 
 ## Not specified in the README
 
-- Token length and exact token format beyond hexadecimal digits and the `t_` prefix in the examples.
-- What exactly the HMAC is computed over.
-- Where the key is stored, and how a per-session key is created and discarded.
+- Whether the key is ever stored outside process memory, and how a per-session key is discarded.
 - How the `diffable` profile handles keys, and whether its tokens are stable across sessions.
 - Edit and write-back message format, and the error shown for rejected unknown tokens.
 - How new text without tokens is introduced into a file.
 - Resource limit values (size, depth, CPU, memory, timeout) for the worker.
 - Quantization and cap values that reduce information leaks.
-- Bucket definitions, such as timestamp bucket width.
+- Bucket schemes other than `log2`, such as timestamp bucket width.
 - Which tools `run` may execute, and its network policy.
 - Exact call order between ingest, normalize, sanitize, schema and egress.
 - Which output parsers exist beyond pytest, mypy and compilers, and how a parser is chosen for a tool.
-- Contents and versioning scheme of the public vocabulary.
+- Contents of the public vocabulary, and when a vocabulary version changes.
 - How `sanitize` handles a directory (such as `./src`): which files it reads and how it treats each one.
 - Config format.
 - Supported model providers for ASFB itself. The parity suite names only the OpenAI, Anthropic and Gemini models.
@@ -372,5 +374,5 @@ ASFB/
 - Format and patterns of the Claude Code deny rules and `PreToolUse` hook, and the set of protected paths.
 - Output format of the `diff` tool.
 - Transport used by the MCP server.
-- Contents of the canary corpus and the parity task corpus.
+- Contents of the parity task corpus.
 - How the parity suite's offline checks are run apart from the `pytest` command.

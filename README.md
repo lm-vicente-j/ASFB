@@ -112,7 +112,7 @@ Limits:
 
 Three metrics, tracked in CI:
 
-- **Leak rate.** Canary values planted in a test corpus must never appear in any output. Target: zero.
+- **Leak rate.** Canary values planted in a test corpus must never appear in any output. Target: zero. Each canary is `cnry_` plus 16 random hex digits, fresh for each test, planted in the templates of `tests/corpus/canary/carriers.json`.
 - **Task success.** Share of agent tasks solved with the censored view, compared with the original source.
 - **Token cost.** Tokens the model spends per task with the censored view, compared with the original source.
 
@@ -188,14 +188,14 @@ MCP server tools:
 
 ## Design principles
 
-1. **Allowlist, never blocklist.** Only what is in a versioned public vocabulary (languages, web standards, frameworks such as Bootstrap) passes; everything else is censored.
-2. **Closed output schema.** Pydantic v2 models with `extra="forbid"`. Only enums, bounded integers, booleans, tokens and public vocabulary. No free `str` from the source.
+1. **Allowlist, never blocklist.** Only what is in a versioned public vocabulary (languages, web standards, frameworks such as Bootstrap) passes; everything else is censored. Each vocabulary has an id made of lowercase letters and digits, separated by dots, and an integer version (1 to 65535). A document lists the id and version of each vocabulary it uses, and egress rejects unknown ids, version mismatches and terms that are not in the declared vocabulary. Terms are 1 to 64 printable ASCII characters, without spaces.
+2. **Closed output schema.** Pydantic v2 models with `extra="forbid"`. Only enums, bounded integers, booleans, tokens and public vocabulary. No free `str` from the source. The first bucket scheme is `log2`: the index is the bit length of a non-negative integer (0 to 64).
 3. **Taint typing.** Source text lives in `Untrusted[str]` and can only become a `Token`, `Bucket` or `EnumValue` through sanitizer functions. Checked with strict mypy; **Python gives no compile-time guarantee**.
 4. **Defense in depth.** A single egress gate (`egress.emit()`) revalidates every output against JSON Schema and rejects any string that is neither public vocabulary nor a token. It fails closed, with no partial output.
 5. **Process isolation.** Parsing and sanitizing run in a worker with no network and no writes, with size, depth, CPU and memory limits. Only validated JSON crosses the boundary.
 6. **Local vault.** Originals and the token → original map stay on the machine.
 7. **Content-free logs and exceptions.** Static codes, no local variables in tracebacks.
-8. **Determinism.** Same input and same key give the same tokens (HMAC-SHA256, 256-bit key, per session by default).
+8. **Determinism.** Same input and same key give the same tokens (HMAC-SHA256, 256-bit key, per session by default). A token is `t_` plus the first 16 lowercase hex digits of the HMAC of `asfb.token/1`, a NUL byte and the UTF-8 bytes of the value, with no extra normalization. There is no per-context salt: under one key, a value gets the same token everywhere. The session key is 32 bytes from `secrets.token_bytes`, kept only in process memory.
 
 ---
 
@@ -215,7 +215,7 @@ MCP server tools:
 
 - Python >= 3.12.
 - Windows, Linux or macOS.
-- Planned stack: pydantic v2, pytest, hypothesis, ruff, mypy `--strict`.
+- Planned stack: pydantic v2, jsonschema (egress check against the committed JSON Schema), pytest, hypothesis, ruff, mypy `--strict`.
 
 **Isolation note:** isolation depends on the OS. Linux gets stronger isolation (seccomp). Windows has no seccomp; it uses a child process with Job Objects and resource limits, which is weaker.
 
