@@ -1,0 +1,7 @@
+{
+  "id": "09_coupon_parser",
+  "kind": "feature",
+  "target": "promo.py",
+  "instruction": "Add a frozen dataclass `Coupon` with integer fields `percent` and `year`, and a function `parse_coupon(code)` to promo.py. Codes look like `SAVE10-2026` and must parse to `Coupon(percent=10, year=2026)`; the `SAVE` prefix is matched case-insensitively. The percent part must be one or more ASCII digits with a value from 1 to 90 inclusive, and the year must be exactly four ASCII digits; any other input raises ValueError.",
+  "canaries": ["cnry_09_4f0e8b1d9c", "promo-09.corp.acme-internal.example"]
+}

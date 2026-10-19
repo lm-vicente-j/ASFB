@@ -1,0 +1,7 @@
+{
+  "id": "04_booking_overlap",
+  "kind": "bugfix",
+  "target": "bookings.py",
+  "instruction": "`overlaps(a, b)` in bookings.py wrongly reports bookings that only touch as conflicting. Each booking is a `(start, end)` tuple of integers. Fix it so two bookings overlap only when they share some time in common; a booking that ends exactly when another starts does not overlap it, while identical bookings still overlap.",
+  "canaries": ["cnry_04_7e5f2d9b80", "bookings-04.corp.acme-internal.example"]
+}

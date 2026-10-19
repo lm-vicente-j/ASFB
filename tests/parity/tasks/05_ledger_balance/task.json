@@ -1,0 +1,7 @@
+{
+  "id": "05_ledger_balance",
+  "kind": "feature",
+  "target": "ledger.py",
+  "instruction": "Add `running_balance(entries)` to ledger.py, where `entries` is a list of `LedgerEntry` objects with an `amount` in integer cents and a `kind` of exactly \"credit\" or \"debit\". Return a list with the cumulative balance after each entry: a credit adds its amount and a debit subtracts it, starting from 0. An entry with any other kind must raise ValueError.",
+  "canaries": ["cnry_05_0b8a6c3d14", "ledger-05.corp.acme-internal.example"]
+}

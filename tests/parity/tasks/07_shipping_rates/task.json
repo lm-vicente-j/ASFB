@@ -1,0 +1,7 @@
+{
+  "id": "07_shipping_rates",
+  "kind": "refactor",
+  "target": "shipping.py",
+  "instruction": "Refactor `shipping_cost(weight_kg, zone)` in shipping.py from its if/elif chain into a table-driven lookup, and add a new zone \"remote\" with a base fee of 12.00 and a rate of 3.40 per kilogram, so its cost is 12.00 + 3.40 * weight_kg. The existing zones \"domestic\", \"regional\" and \"international\" must return exactly the same results as before. Keep rounding to 2 decimal places, keep the ValueError for weight_kg <= 0, and raise ValueError for unknown zones.",
+  "canaries": ["cnry_07_56d1b0f8a3", "shipping-07.corp.acme-internal.example"]
+}

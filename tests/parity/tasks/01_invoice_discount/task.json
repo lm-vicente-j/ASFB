@@ -1,0 +1,7 @@
+{
+  "id": "01_invoice_discount",
+  "kind": "bugfix",
+  "target": "billing.py",
+  "instruction": "`apply_discount(total, pct)` in billing.py does not cap the discount. Fix it so a `pct` above 50 is treated as 50, and round the result to 2 decimal places. Negative `total` or `pct` must still raise ValueError.",
+  "canaries": ["cnry_01_9f2c4e7a1b", "billing-01.corp.acme-internal.example"]
+}

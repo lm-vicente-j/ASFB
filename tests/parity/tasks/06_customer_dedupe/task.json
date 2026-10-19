@@ -1,0 +1,7 @@
+{
+  "id": "06_customer_dedupe",
+  "kind": "feature",
+  "target": "crm.py",
+  "instruction": "Add `dedupe_customers(records)` to crm.py. `records` is a list of dicts, each with an `email` string key. Two records are duplicates when their emails are equal after stripping surrounding whitespace and lowercasing (use `normalize_email`). Return a new list that keeps only the first record for each normalized email, in the original order, leaving the record dicts unchanged.",
+  "canaries": ["cnry_06_e2f7a91c5d", "crm-06.corp.acme-internal.example"]
+}

@@ -1,0 +1,7 @@
+{
+  "id": "03_payroll_overtime",
+  "kind": "bugfix",
+  "target": "payroll.py",
+  "instruction": "`gross_weekly_pay(hourly_rate, hours_worked)` in payroll.py pays every hour at the overtime multiplier once a week goes over 40 hours. Fix it so only hours above 40 are paid at `OVERTIME_MULTIPLIER` times the rate, while the first 40 hours stay at the normal rate. Keep the rounding to 2 decimal places and the ValueError for negative hours.",
+  "canaries": ["cnry_03_c41b9e0a26", "payroll-03.corp.acme-internal.example"]
+}

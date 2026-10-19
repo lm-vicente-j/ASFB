@@ -1,0 +1,4 @@
+pytest
+anthropic
+openai
+google-genai

@@ -1,0 +1,7 @@
+{
+  "id": "10_checkout_tax",
+  "kind": "bugfix",
+  "target": "checkout.py",
+  "instruction": "`checkout_total(line_items, country, region_code)` in checkout.py charges the wrong sales tax because it looks up `tax_rules.RATES` using the country name instead of the region code. Fix checkout.py so the rate is looked up by `region_code`, falling back to `tax_rules.DEFAULT_RATE` for unknown regions. Tax is `round(subtotal * rate, 2)`, the total is `round(subtotal + tax, 2)`, and `tax_rules.py` must not be modified.",
+  "canaries": ["cnry_10_d7b25a6e31", "checkout-10.corp.acme-internal.example"]
+}

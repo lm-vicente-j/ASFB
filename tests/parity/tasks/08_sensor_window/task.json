@@ -1,0 +1,7 @@
+{
+  "id": "08_sensor_window",
+  "kind": "bugfix",
+  "target": "telemetry.py",
+  "instruction": "`moving_average(readings, window)` in telemetry.py drops the last full window; for example, [1, 2, 3, 4] with window 2 should give [1.5, 2.5, 3.5] but currently gives only two values. Fix it so it returns the mean of every run of `window` consecutive readings, in order, as floats. If `window` is larger than the number of readings, return an empty list.",
+  "canaries": ["cnry_08_a9c3e62f07", "telemetry-08.corp.acme-internal.example"]
+}
