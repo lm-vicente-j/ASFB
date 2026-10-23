@@ -8,7 +8,7 @@ import pytest
 
 from asfb import vocab
 from asfb.errors import AsfbError, ErrorCode
-from asfb.vocab import HTML_IDS, VOID_ELEMENTS, FrozenVocabulary, html_registry, load
+from asfb.vocab import ALL_IDS, HTML_IDS, VOID_ELEMENTS, FrozenVocabulary, html_registry, load
 
 TERM_RE = re.compile(r"[A-Za-z0-9_.:/+-]{1,64}")
 DATA_DIR = Path(vocab.__file__).parent / "data"
@@ -145,9 +145,9 @@ def test_shipped_files_match_format(vocab_id: str) -> None:
     assert all(TERM_RE.fullmatch(term) for term in terms)
 
 
-def test_shipped_data_directory_holds_exactly_the_five_files() -> None:
+def test_shipped_data_directory_holds_exactly_the_shipped_files() -> None:
     names = {path.name for path in DATA_DIR.glob("*.json")}
-    assert names == {f"{vocab_id}.json" for vocab_id in HTML_IDS}
+    assert names == {f"{vocab_id}.json" for vocab_id in ALL_IDS}
 
 
 @pytest.mark.parametrize("vocab_id", HTML_IDS)
@@ -240,3 +240,31 @@ def test_html_values_map_input_type_and_button_type() -> None:
     assert values.values_for("button", "type") == frozenset({"button", "reset", "submit"})
     assert values.values_for("ol", "type") is not None
     assert values.values_for("p", "type") is None
+
+
+@pytest.mark.parametrize(
+    "term",
+    ["t_0123456789abcdef", "d_0123456789abcdef", "d_fedcba9876543210"],
+)
+def test_terms_shaped_like_tokens_or_doc_ids_are_refused(data_dir: Path, term: str) -> None:
+    # The sandbox client rewrites every string of this shape; a vocabulary term must never be one.
+    _write(data_dir, json.dumps({"id": SAMPLE_ID, "version": 1, "terms": ["a", term]}))
+    assert _code_of(SAMPLE_ID) is ErrorCode.E_VOCAB_DATA
+
+
+def test_token_shaped_value_in_by_attribute_is_refused(data_dir: Path) -> None:
+    doc = {
+        **VALID_SAMPLE,
+        "terms": ["a", "t_0123456789abcdef"],
+        "by_attribute": {"*": {"x": ["t_0123456789abcdef"]}},
+    }
+    _write(data_dir, json.dumps(doc))
+    assert _code_of(SAMPLE_ID) is ErrorCode.E_VOCAB_DATA
+
+
+def test_near_token_shapes_are_still_valid_terms(data_dir: Path) -> None:
+    # One hex digit short, and upper-case hex: not the token shape, so allowed.
+    terms = ["t_0123456789ABCDEF", "t_0123456789abcde"]
+    _write(data_dir, json.dumps({"id": SAMPLE_ID, "version": 1, "terms": terms}))
+    loaded = load(SAMPLE_ID)
+    assert loaded.terms == frozenset(terms)
