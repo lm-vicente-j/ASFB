@@ -63,22 +63,21 @@ Public content passes: tags, attribute names, standard values (`type="email"`), 
 
 ## Installation
 
-Requirements: Python 3.12 or later, and git.
+Requirements: git and [uv](https://docs.astral.sh/uv/getting-started/installation/), the Python package manager. uv installs Python 3.12 for you when the system does not have it. To install uv, follow the official instructions at https://docs.astral.sh/uv/getting-started/installation/, or use `pip install uv` or `pipx install uv`.
 
 ```bash
 git clone https://github.com/lm-vicente-j/ASFB.git
 cd ASFB
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .
-asfb --help
+uv sync
+uv run asfb --help
 ```
 
-On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1` and use `python` instead of `python3`.
+`uv sync` creates `.venv` inside the repository and installs ASFB in editable mode, with its runtime dependencies (pydantic, jsonschema) and the `dev` group (pytest, hypothesis, ruff, mypy). The versions come from `uv.lock`, which is committed. Use `uv sync --no-dev` for runtime dependencies only.
 
-- `pip install -e .` installs the `asfb` command and its two runtime dependencies, pydantic and jsonschema. `pyproject.toml` defines no optional extras.
-- The development tools (pytest, hypothesis, ruff, mypy) are in the `dev` dependency group: `pip install --group dev` (pip 25.1 or later).
-- To verify the install, `asfb --help` must list the commands `sanitize`, `keygen`, `serve` and `agents`.
+- You do not need to activate the environment: `uv run <command>` works the same in fish, bash, zsh and PowerShell. If you prefer a classic activation in fish, use `source .venv/bin/activate.fish`; in bash or zsh, `source .venv/bin/activate`.
+- To verify the install, `uv run asfb --help` must list the commands `sanitize`, `keygen`, `serve` and `agents`.
+- Run the tests with `uv run pytest`, and the linters with `uv run ruff check .` and `uv run mypy`.
+- If `.venv` was created by another Python (for example on Windows), `uv sync` may refuse to reuse it. Remove it yourself, or use another directory with `UV_PROJECT_ENVIRONMENT=.venv-uv uv sync` (the `.venv*/` pattern is ignored by git).
 
 **Platforms.** Linux is the best-verified platform. Windows and macOS have not been tested: the install is expected to work, but the process isolation limits described in *Guarantees and limits* have not been checked there.
 
@@ -86,7 +85,7 @@ On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1` and use `pytho
 
 ## Quick start
 
-Save this as `site/index.html` to follow the steps below:
+Save this as `site/index.html` to follow the steps below. The commands run `asfb` through uv. `/ruta/ASFB` is your clone of the repository; `--project` makes uv use it from any directory, so you can run the commands from your own project. If you run them from inside the clone, `uv run asfb` is enough.
 
 ```html
 <!DOCTYPE html>
@@ -106,7 +105,7 @@ Save this as `site/index.html` to follow the steps below:
 
 ```bash
 mkdir -p ~/.asfb
-asfb keygen ~/.asfb/key
+uv run --project /ruta/ASFB asfb keygen ~/.asfb/key
 ```
 
 `keygen` prints nothing and never overwrites an existing file. Keep the key outside every folder ASFB protects: a key file inside a root is refused (`E_KEY_FILE`). Without `--key-file`, each run uses a new random key, so tokens change from one run to the next.
@@ -114,10 +113,10 @@ asfb keygen ~/.asfb/key
 ### 2. Sanitize a file and read the censored view
 
 ```bash
-asfb sanitize site/index.html --key-file ~/.asfb/key
+uv run --project /ruta/ASFB asfb sanitize site/index.html --key-file ~/.asfb/key
 ```
 
-The output keeps the public parts (tags, `type="email"`, `btn btn-primary`) and replaces the user content (the heading, the form action, the field name, the value and the button text) with tokens such as `t_…`. The same value gets the same token under the same key. Add `--json` to print the emitted JSON instead. Given a directory, `asfb sanitize site --key-file ~/.asfb/key` prints a listing of its documents.
+The output keeps the public parts (tags, `type="email"`, `btn btn-primary`) and replaces the user content (the heading, the form action, the field name, the value and the button text) with tokens such as `t_…`. The same value gets the same token under the same key. Add `--json` to print the emitted JSON instead. Given a directory, `uv run --project /ruta/ASFB asfb sanitize site --key-file ~/.asfb/key` prints a listing of its documents.
 
 ### 3. Use the Python API
 
@@ -140,13 +139,26 @@ print(ref.view)  # the censored view
 To start the server by hand (it waits for JSON-RPC messages on stdin):
 
 ```bash
-asfb serve --root "$PWD/site" --key-file ~/.asfb/key
+uv run --project /ruta/ASFB asfb serve --root "$PWD/site" --key-file ~/.asfb/key
 ```
 
 To register it, print the MCP configuration and save it as the project's `.mcp.json`. Use absolute paths, because relative paths are written as given:
 
 ```bash
-asfb agents mcp-config --root "$PWD/site" --key-file ~/.asfb/key > .mcp.json
+uv run --project /ruta/ASFB asfb agents mcp-config --root "$PWD/site" --key-file ~/.asfb/key > .mcp.json
+```
+
+`asfb agents mcp-config` writes the absolute path of the interpreter that runs it, which is the `.venv` of the clone when you run it through `uv run --project`. That path works from any directory, so the harness can start the server from another folder. If you prefer uv to start the server, write the entry by hand (replace the paths):
+
+```json
+{
+  "mcpServers": {
+    "asfb": {
+      "command": "uv",
+      "args": ["run", "--project", "/ruta/ASFB", "asfb", "serve", "--root", "/ruta/proyecto/site", "--key-file", "/home/usuario/.asfb/key"]
+    }
+  }
+}
 ```
 
 Claude Code reads `.mcp.json` from the project root. For other harnesses, copy the `mcpServers` entry into their MCP settings. The server exposes four tools: `sanitize`, `edit`, `run` and `diff`.
@@ -156,7 +168,7 @@ Claude Code reads `.mcp.json` from the project root. For other harnesses, copy t
 The censored view protects nothing if the agent can still open the original files with its own tools.
 
 ```bash
-asfb agents claude --root "$PWD/site" --key-file ~/.asfb/key
+uv run --project /ruta/ASFB asfb agents claude --root "$PWD/site" --key-file ~/.asfb/key
 ```
 
 This prints Claude Code settings with `permissions.deny` rules and a `PreToolUse` hook, and writes nothing. Merge them into `.claude/settings.json` of the project. The hook blocks reads, edits and shell commands that touch the protected paths. It is a best-effort check, not an OS sandbox; see *Guarantees and limits*.
@@ -167,7 +179,7 @@ To have any agent install and use ASFB, paste this:
 
 ```text
 Install and use ASFB (https://github.com/lm-vicente-j/ASFB) to work with protected documents.
-1. Clone the repository and install it in a virtualenv with `pip install -e .`.
+1. Clone the repository and install it with uv: `git clone https://github.com/lm-vicente-j/ASFB.git` and `uv sync` inside it (uv: https://docs.astral.sh/uv/). Then run ASFB with `uv run --project /ruta/ASFB asfb ...`; no activation is needed.
 2. Read the "Quick start" section of its README.md and follow it.
 3. Read, edit, run and diff protected files only through the ASFB tools (sanitize, edit, run, diff).
 4. Never open the original protected files directly, with any tool, search or shell command.
