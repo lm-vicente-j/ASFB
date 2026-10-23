@@ -1,0 +1,18 @@
+[
+  {"id": "code-name", "template": "@@CANARY@@ = 1\n"},
+  {"id": "code-string", "template": "value = 'x @@CANARY@@ y'\n"},
+  {"id": "code-comment", "template": "x = 1  # @@CANARY@@\n"},
+  {"id": "code-comment-own-line", "template": "def f():\n    # @@CANARY@@\n    return 1\n"},
+  {"id": "code-docstring", "template": "def f():\n    \"\"\"@@CANARY@@\"\"\"\n"},
+  {"id": "code-fstring-expression", "template": "msg = f'{@@CANARY@@}'\n"},
+  {"id": "code-fstring-literal", "template": "msg = f'hi @@CANARY@@ {x}'\n"},
+  {"id": "code-import", "template": "import @@CANARY@@\n"},
+  {"id": "code-attribute", "template": "obj.@@CANARY@@ = 2\n"},
+  {"id": "code-parameter", "template": "def f(@@CANARY@@):\n    return @@CANARY@@\n"},
+  {"id": "code-bytes", "template": "b = b'@@CANARY@@'\n"},
+  {"id": "code-raw", "template": "r = r'\\@@CANARY@@'\n"},
+  {"id": "code-bidi-comment", "template": "if x:  # \u202e@@CANARY@@\n    pass\n"},
+  {"id": "code-nested-class", "template": "class C:\n    def m(self):\n        return '@@CANARY@@'\n"},
+  {"id": "code-decorator", "template": "@@CANARY@@.route('/x')\ndef f():\n    pass\n"},
+  {"id": "code-crlf", "template": "a = '@@CANARY@@'\r\nb = 2\r\n"}
+]
