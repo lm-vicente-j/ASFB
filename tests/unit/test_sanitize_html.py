@@ -9,7 +9,7 @@ from asfb.errors import AsfbError, ErrorCode
 from asfb.sanitize import html as censor
 from asfb.sanitize.html import censor_document
 from asfb.sanitize.tokens import token_for
-from asfb.schema.doc import Profile, SourceKind
+from asfb.schema.doc import DocV1, Profile, SourceKind
 from asfb.schema.html import Doctype, Element, Node, Opaque, OpaqueForm, Text, Url
 from asfb.types.key import SessionKey
 from asfb.types.token import Token
@@ -20,8 +20,13 @@ from asfb.vocab import FrozenVocabulary
 KEY = SessionKey(bytes(range(32)))
 
 
+def _html(doc: api.Doc) -> DocV1:
+    assert isinstance(doc.model, DocV1)
+    return doc.model
+
+
 def _body(html: str) -> tuple[Node, ...]:
-    return api.sanitize_html(html, key=KEY).model.body
+    return _html(api.sanitize_html(html, key=KEY)).body
 
 
 def _only(html: str) -> Node:
@@ -322,14 +327,14 @@ def test_unterminated_attribute_quote_drops_the_rest_without_leaking(markup: str
     # Observed on 3.12 and 3.14 alike: the quote never closes, the open tag is dropped at EOF,
     # and nothing after the quote reaches the body. Only the common behavior is pinned.
     doc = api.sanitize_html(markup, key=KEY)
-    assert doc.model.body == ()
+    assert _html(doc).body == ()
     assert str(doc.views.censored()) == ""
     assert "secretvalue" not in doc.json
     assert "secretvalue" not in str(doc.views.censored())
 
 
 def test_document_declares_all_five_vocabularies_sorted() -> None:
-    model = api.sanitize_html("<p>x</p>", key=KEY).model
+    model = _html(api.sanitize_html("<p>x</p>", key=KEY))
     assert [ref.id for ref in model.vocab] == [
         "css.bootstrap",
         "html.attributes",

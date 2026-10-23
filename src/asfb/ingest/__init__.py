@@ -12,6 +12,7 @@ from asfb.ingest.html import (
     parse_html,
 )
 from asfb.ingest.source import read_path, read_text
+from asfb.ingest.text import Eol, plain_lines, split_lines
 
 __all__ = [
     "CData",
@@ -19,10 +20,13 @@ __all__ = [
     "Declaration",
     "Doctype",
     "Element",
+    "Eol",
     "Node",
     "ProcessingInstruction",
     "Text",
     "parse_html",
+    "plain_lines",
     "read_path",
     "read_text",
+    "split_lines",
 ]

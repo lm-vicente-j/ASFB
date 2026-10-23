@@ -6,9 +6,16 @@ from typing import Any
 import pytest
 
 from asfb import sanitize_html
+from asfb.api import Doc
 from asfb.errors import AsfbError, ErrorCode
 from asfb.ingest.limits import MAX_ATTRS, MAX_BYTES, MAX_DEPTH, MAX_NODES
+from asfb.schema.doc import DocV1
 from asfb.schema.html import Element
+
+
+def _html(doc: Doc) -> DocV1:
+    assert isinstance(doc.model, DocV1)
+    return doc.model
 
 
 def _code_of(html: str) -> AsfbError:
@@ -37,7 +44,7 @@ def _depth(nodes: tuple[Any, ...]) -> int:
 
 def test_depth_at_max_is_accepted() -> None:
     doc = sanitize_html("<div>" * MAX_DEPTH + "x" + "</div>" * MAX_DEPTH)
-    assert _depth(doc.model.body) == MAX_DEPTH
+    assert _depth(_html(doc).body) == MAX_DEPTH
 
 
 def test_depth_one_over_max_is_refused() -> None:
@@ -57,7 +64,7 @@ def test_depth_64_document_emits_and_renders() -> None:
 
 def test_nodes_at_max_are_accepted() -> None:
     doc = sanitize_html("<i></i>" * MAX_NODES)
-    assert len(doc.model.body) == MAX_NODES
+    assert len(_html(doc).body) == MAX_NODES
 
 
 def test_nodes_one_over_max_are_refused() -> None:
@@ -67,7 +74,7 @@ def test_nodes_one_over_max_are_refused() -> None:
 def test_attributes_at_max_are_accepted() -> None:
     attrs = " ".join(f"a{index}=x" for index in range(MAX_ATTRS))
     doc = sanitize_html(f"<p {attrs}></p>")
-    (node,) = doc.model.body
+    (node,) = _html(doc).body
     assert isinstance(node, Element)
     assert len(node.attrs) == MAX_ATTRS
 
@@ -79,7 +86,7 @@ def test_attributes_one_over_max_are_refused() -> None:
 
 def test_source_at_max_bytes_is_accepted() -> None:
     doc = sanitize_html("a" * MAX_BYTES)
-    assert len(doc.model.body) == 1
+    assert len(_html(doc).body) == 1
 
 
 def test_source_one_byte_over_max_bytes_is_refused() -> None:

@@ -3,14 +3,22 @@
 Vocabulary terms pass through as EnumValue. Every other string from the source becomes a Token
 minted under the session key. Constructs the censoring table does not cover fail closed with
 E_HTML_PARSE. Strings are read here (unwrap is allowed in sanitize/), never copied out.
+
+Every token minted here is also reported as a (token, surface) pair. A surface is the decoded
+value with outer ASCII whitespace stripped, taken before Cf removal and NFC, so variants that
+normalize to one token stay distinct surfaces. Pairs hold originals: they go only to the vault
+(through the isolated worker or in-process) and are never part of a Doc.
 """
 
+import re
 import string
 from collections.abc import Container
 from typing import Final
 
 from asfb import ingest, normalize
 from asfb.errors import AsfbError, ErrorCode
+from asfb.sanitize.pairs import PairRecorder, surface_of
+from asfb.sanitize.pairs import SurfacePairs as SurfacePairs  # re-exported for vault and tests
 from asfb.sanitize.tokens import token_for
 from asfb.sanitize.urls import censor_url
 from asfb.schema import html as schema
@@ -48,10 +56,24 @@ _RAW_TEXT: Final = frozenset({"script", "style"})
 _TEXT_ONLY: Final = frozenset({"title", "textarea"})
 _MAX_PARTS: Final = 128
 _LOWER: Final = str.maketrans(string.ascii_uppercase, string.ascii_lowercase)
+_RAW_SPLIT: Final = re.compile(r"[ \t\n\r]+")
 
 
 def _ascii_lower(text: str) -> str:
     return text.translate(_LOWER)
+
+
+def _aligned(raw: str, parts: list[str]) -> list[str]:
+    """One raw surface per normalized part. The raw pieces split on the same ASCII whitespace as
+    normalize.split, so they must normalize to exactly the parts. If they do not, the invariant is
+    broken and the document is refused: a normalized value is never recorded as a surface."""
+    candidates = [surface_of(piece) for piece in _RAW_SPLIT.split(raw)]
+    surfaces = [
+        candidate for candidate in candidates if unwrap(normalize.value(Untrusted(candidate)))
+    ]
+    if [unwrap(normalize.value(Untrusted(surface))) for surface in surfaces] != parts:
+        raise AsfbError(ErrorCode.E_HTML_PARSE)
+    return surfaces
 
 
 def _frozen(vocab_id: str) -> FrozenVocabulary:
@@ -74,7 +96,7 @@ def _term(vocab_id: str, term: str) -> EnumValue:
 
 
 class _Censor:
-    """Walks one raw tree. Holds the session key and the vocabularies, nothing else."""
+    """Walks one raw tree. Holds the session key, the vocabularies and the pairs, nothing else."""
 
     def __init__(self, key: SessionKey) -> None:
         self._session = key
@@ -84,23 +106,39 @@ class _Censor:
         self._classes = _frozen(CSS_BOOTSTRAP)
         self._schemes = _frozen(URL_SCHEMES)
         self._doctype_seen = False
+        self._recorder = PairRecorder()
 
-    def _token(self, text: Untrusted[str]) -> Token:
-        return token_for(self._session, text)
+    def _record(self, token: Token, surface: str) -> None:
+        self._recorder.record(token, surface)
+
+    def _token(self, text: Untrusted[str], surface: str) -> Token:
+        token = token_for(self._session, text)
+        self._record(token, surface)
+        return token
+
+    def pairs(self) -> tuple[tuple[Token, str], ...]:
+        return self._recorder.items()
 
     def _part(
-        self, part: str, *, lower: bool, vocab_id: str | None, terms: Container[str]
+        self,
+        part: str,
+        surface: str,
+        *,
+        lower: bool,
+        vocab_id: str | None,
+        terms: Container[str],
     ) -> EnumValue | Token:
         if vocab_id is not None:
             if part in terms:
                 return _term(vocab_id, part)
             if lower and _ascii_lower(part) in terms:
                 return _term(vocab_id, _ascii_lower(part))
-        return self._token(Untrusted(part))
+        return self._token(Untrusted(part), surface)
 
     def _parts(
         self,
         text: str,
+        raw: str,
         *,
         lower: bool,
         vocab_id: str | None = None,
@@ -108,21 +146,29 @@ class _Censor:
     ) -> schema.AttrValue:
         parts = [unwrap(part) for part in normalize.split(Untrusted(text))]
         if len(parts) > _MAX_PARTS:
-            return self._token(Untrusted(text))
+            return self._token(Untrusted(text), surface_of(raw))
+        surfaces = _aligned(raw, parts)
         items = tuple(
-            self._part(part, lower=lower, vocab_id=vocab_id, terms=terms) for part in parts
+            self._part(part, surface, lower=lower, vocab_id=vocab_id, terms=terms)
+            for part, surface in zip(parts, surfaces, strict=True)
         )
         return items[0] if len(items) == 1 else items
 
     def _tag(self, name: str) -> EnumValue | Token:
         if name in self._elements:
             return _term(HTML_ELEMENTS, name)
-        return self._token(Untrusted(name))
+        return self._token(Untrusted(name), surface_of(name))
 
     def _attr_name(self, name: str) -> EnumValue | Token:
         if name in self._attributes:
             return _term(HTML_ATTRIBUTES, name)
-        return self._token(Untrusted(name))
+        return self._token(Untrusted(name), surface_of(name))
+
+    def _url(self, text: Untrusted[str], raw: str) -> schema.Url | Token:
+        censored = censor_url(self._session, text, self._schemes, self._record)
+        if isinstance(censored, Token):
+            self._record(censored, surface_of(raw))
+        return censored
 
     def _attr_value(
         self, element: str, name: str, value: Untrusted[str] | None
@@ -133,16 +179,17 @@ class _Censor:
         plain = unwrap(text)
         if not plain:
             return True
+        raw = unwrap(value)
         allowed = self._values.values_for(element, name)
         if allowed is not None:
-            return self._parts(plain, lower=True, vocab_id=HTML_VALUES, terms=allowed)
+            return self._parts(plain, raw, lower=True, vocab_id=HTML_VALUES, terms=allowed)
         if name == "class":
-            return self._parts(plain, lower=False, vocab_id=CSS_BOOTSTRAP, terms=self._classes)
+            return self._parts(plain, raw, lower=False, vocab_id=CSS_BOOTSTRAP, terms=self._classes)
         if name in _TOKEN_LIST:
-            return self._parts(plain, lower=False)
+            return self._parts(plain, raw, lower=False)
         if name in _URL_ATTRIBUTES:
-            return censor_url(self._session, text, self._schemes)
-        return self._token(text)
+            return self._url(text, raw)
+        return self._token(text, surface_of(raw))
 
     def _attr(self, element: str, name: str, value: Untrusted[str] | None) -> schema.Attr:
         return schema.Attr(
@@ -171,10 +218,11 @@ class _Censor:
             if not isinstance(node, ingest.Text):
                 raise AsfbError(ErrorCode.E_HTML_PARSE)
             pieces.append(unwrap(node.text))
-        text = normalize.value(Untrusted("".join(pieces)))
+        raw = "".join(pieces)
+        text = normalize.value(Untrusted(raw))
         if not unwrap(text):
             return ()
-        return (schema.Text(text=self._token(text)),)
+        return (schema.Text(text=self._token(text, surface_of(raw))),)
 
     def document(self, nodes: tuple[ingest.Node, ...], profile: Profile) -> DocV1:
         return DocV1(
@@ -200,7 +248,7 @@ class _Censor:
                 text = normalize.value(node.text)
                 if not unwrap(text):
                     return None
-                return schema.Text(text=self._token(text))
+                return schema.Text(text=self._token(text, surface_of(unwrap(node.text))))
             case ingest.Comment():
                 return self._opaque(schema.OpaqueForm.COMMENT, node.text)
             case ingest.CData():
@@ -214,7 +262,7 @@ class _Censor:
         raise AsfbError(ErrorCode.E_HTML_PARSE)
 
     def _opaque(self, form: schema.OpaqueForm, text: Untrusted[str]) -> schema.Opaque:
-        return schema.Opaque(form=form, text=self._token(text))
+        return schema.Opaque(form=form, text=self._token(text, surface_of(unwrap(text))))
 
     def _doctype(self, node: ingest.Doctype) -> schema.Doctype:
         if self._doctype_seen:
@@ -223,6 +271,16 @@ class _Censor:
         return schema.Doctype(html=_ascii_lower(unwrap(normalize.value(node.text))) == "html")
 
 
+def censor_with_pairs(
+    key: SessionKey, nodes: tuple[ingest.Node, ...], profile: Profile, /
+) -> tuple[DocV1, SurfacePairs]:
+    """Censor a raw tree into the v1 document and the (token, surface) pairs it minted."""
+    censor = _Censor(key)
+    model = censor.document(nodes, profile)
+    return model, SurfacePairs(censor.pairs())
+
+
 def censor_document(key: SessionKey, nodes: tuple[ingest.Node, ...], profile: Profile, /) -> DocV1:
     """Censor a raw tree into the v1 document. Raises AsfbError with a static code."""
-    return _Censor(key).document(nodes, profile)
+    model, _pairs = censor_with_pairs(key, nodes, profile)
+    return model

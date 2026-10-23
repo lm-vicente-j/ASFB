@@ -6,6 +6,7 @@ import pytest
 
 from asfb import api
 from asfb.sanitize.tokens import token_for
+from asfb.schema.doc import DocV1
 from asfb.schema.html import Element, Url
 from asfb.types.key import SessionKey
 from asfb.types.token import Token
@@ -14,6 +15,11 @@ from asfb.types.values import EnumValue
 
 KEY = SessionKey(bytes(range(32)))
 MAX_PATH = 256
+
+
+def _html(doc: api.Doc) -> DocV1:
+    assert isinstance(doc.model, DocV1)
+    return doc.model
 
 
 def _tok(text: str) -> Token:
@@ -26,7 +32,7 @@ def _scheme(term: str) -> EnumValue:
 
 def _href(value: str) -> Any:
     doc = api.sanitize_html(f'<a href="{value}"></a>', key=KEY)
-    element = doc.model.body[0]
+    element = _html(doc).body[0]
     assert isinstance(element, Element)
     return element.attrs[0].value
 

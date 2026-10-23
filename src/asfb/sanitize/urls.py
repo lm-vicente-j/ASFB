@@ -5,6 +5,7 @@ query or fragment, a dropped "//") and TAB, LF or CR (urlsplit removes them) sen
 to one Token, so no character is lost without a token.
 """
 
+from collections.abc import Callable
 from typing import Final
 from urllib.parse import urlsplit
 
@@ -21,8 +22,18 @@ SEGMENTED_SCHEMES: Final = frozenset({"http", "https", "ws", "wss", "ftp", "file
 MAX_PATH: Final = 256
 _LOSSY: Final = ("\t", "\n", "\r")
 
+Recorder = Callable[[Token, str], None]
 
-def _split(key: SessionKey, text: str, schemes: Vocabulary) -> Url | None:
+
+def _mint(key: SessionKey, text: str, record: Recorder | None) -> Token:
+    """Mint a token for one piece and report the (token, piece) pair to the recorder."""
+    token = token_for(key, Untrusted(text))
+    if record is not None:
+        record(token, text)
+    return token
+
+
+def _split(key: SessionKey, text: str, schemes: Vocabulary, record: Recorder | None) -> Url | None:
     """The Url for a known shape, or None when the whole value must be one Token."""
     if any(char in text for char in _LOSSY):
         return None
@@ -36,7 +47,7 @@ def _split(key: SessionKey, text: str, schemes: Vocabulary) -> Url | None:
     term = EnumValue(vocab=URL_SCHEMES, term=scheme) if scheme else None
     remainder = text[len(scheme) + 1 :] if scheme else text
     if scheme and scheme not in SEGMENTED_SCHEMES:
-        path = (token_for(key, Untrusted(remainder)),) if remainder else ()
+        path = (_mint(key, remainder, record),) if remainder else ()
         return Url(scheme=term, path=path)
     if remainder.startswith("//") and not parts.netloc:
         return None
@@ -53,18 +64,24 @@ def _split(key: SessionKey, text: str, schemes: Vocabulary) -> Url | None:
         return None
     return Url(
         scheme=term,
-        authority=token_for(key, Untrusted(parts.netloc)) if parts.netloc else None,
+        authority=_mint(key, parts.netloc, record) if parts.netloc else None,
         rooted=rooted,
-        path=tuple(token_for(key, Untrusted(segment)) for segment in segments),
+        path=tuple(_mint(key, segment, record) for segment in segments),
         trailing_slash=trailing,
-        query=token_for(key, Untrusted(parts.query)) if parts.query else None,
-        fragment=token_for(key, Untrusted(parts.fragment)) if parts.fragment else None,
+        query=_mint(key, parts.query, record) if parts.query else None,
+        fragment=_mint(key, parts.fragment, record) if parts.fragment else None,
     )
 
 
-def censor_url(key: SessionKey, u: Untrusted[str], schemes: Vocabulary, /) -> Url | Token:
-    """Censor a normalized URL value (the output of normalize.value) into a Url or one Token."""
-    url = _split(key, unwrap(u), schemes)
+def censor_url(
+    key: SessionKey, u: Untrusted[str], schemes: Vocabulary, /, record: Recorder | None = None
+) -> Url | Token:
+    """Censor a normalized URL value (the output of normalize.value) into a Url or one Token.
+
+    Every token minted for a piece of a Url is reported to record. The whole-value Token of the
+    fallback is not reported here; the caller reports it with its own surface.
+    """
+    url = _split(key, unwrap(u), schemes, record)
     if url is None:
         return token_for(key, u)
     return url

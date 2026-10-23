@@ -1,8 +1,8 @@
 """Raw HTML tree built with the stdlib html.parser (convert_charrefs=True).
 
-Known gap: M1 runs in-process. The limits in limits.py bound depth, node count and
-attribute count, but there is no worker process and no CPU, memory or time limit.
-A bug in html.parser can break the no-leak guarantee; process isolation is later work.
+The limits in limits.py bound depth, node count and attribute count. Session, the CLI and the
+MCP server run this parser in the isolated worker (sandbox/) by default, and the Python API does so
+with isolate=True. A bug in html.parser is contained by the worker's limits and audit hook.
 
 Every string in the returned tree is wrapped in Untrusted before it leaves this module.
 The parser works on plain str from the caller, never on Untrusted content.
