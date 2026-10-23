@@ -1,0 +1,27 @@
+{
+  "id": "log.fields",
+  "version": 1,
+  "terms": [
+    "exc_info",
+    "exc_type",
+    "func",
+    "host",
+    "level",
+    "lineno",
+    "logger",
+    "message",
+    "module",
+    "msg",
+    "name",
+    "pid",
+    "service",
+    "severity",
+    "span_id",
+    "stack",
+    "thread",
+    "time",
+    "timestamp",
+    "trace_id",
+    "ts"
+  ]
+}

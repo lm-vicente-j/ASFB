@@ -1,0 +1,98 @@
+[
+  {
+    "id": "jsonl-msg",
+    "template": "{\"msg\": \"login for @@CANARY@@ failed\"}\n"
+  },
+  {
+    "id": "jsonl-message-key",
+    "template": "{\"message\": \"@@CANARY@@\", \"level\": \"info\"}\n"
+  },
+  {
+    "id": "jsonl-field-name",
+    "template": "{\"@@CANARY@@\": 1, \"msg\": \"x\"}\n"
+  },
+  {
+    "id": "jsonl-field-value",
+    "template": "{\"user\": \"@@CANARY@@\", \"msg\": \"x\"}\n"
+  },
+  {
+    "id": "jsonl-logger",
+    "template": "{\"logger\": \"@@CANARY@@.db\", \"msg\": \"x\"}\n"
+  },
+  {
+    "id": "jsonl-time-value",
+    "template": "{\"timestamp\": \"@@CANARY@@\", \"msg\": \"x\"}\n"
+  },
+  {
+    "id": "jsonl-level-value",
+    "template": "{\"level\": \"@@CANARY@@\", \"msg\": \"x\"}\n"
+  },
+  {
+    "id": "jsonl-exception",
+    "template": "{\"exc_type\": \"@@CANARY@@\", \"msg\": \"x\"}\n"
+  },
+  {
+    "id": "jsonl-array",
+    "template": "{\"tags\": [\"@@CANARY@@\", \"b\"], \"msg\": \"x\"}\n"
+  },
+  {
+    "id": "jsonl-nested",
+    "template": "{\"req\": {\"path\": \"/@@CANARY@@\", \"id\": 7}}\n"
+  },
+  {
+    "id": "jsonl-deep",
+    "template": "{\"msg\": \"x\", \"deep\": {\"k\": {\"k\": {\"k\": {\"k\": {\"k\": {\"k\": {\"k\": {\"k\": {\"k\": {\"k\": {\"k\": {\"k\": {\"k\": {\"k\": {\"k\": {\"k\": {\"k\": {\"k\": \"@@CANARY@@\"}}}}}}}}}}}}}}}}}}}\n"
+  },
+  {
+    "id": "jsonl-broken",
+    "template": "{\"msg\": \"@@CANARY@@\" broken\n"
+  },
+  {
+    "id": "jsonl-nan",
+    "template": "{\"msg\": \"@@CANARY@@\", \"n\": NaN}\n"
+  },
+  {
+    "id": "jsonl-bidi",
+    "template": "{\"msg\": \"a\\u202e@@CANARY@@\"}\n"
+  },
+  {
+    "id": "jsonl-crlf",
+    "template": "{\"msg\": \"@@CANARY@@\"}\r\n{\"msg\": \"b\"}\r\n"
+  },
+  {
+    "id": "text-message",
+    "template": "2024-05-01T10:00:00Z INFO @@CANARY@@ started\n"
+  },
+  {
+    "id": "text-unknown-level",
+    "template": "2024-05-01T10:00:00Z @@CANARY@@ started\n"
+  },
+  {
+    "id": "text-logger",
+    "template": "2024-05-01T10:00:00Z WARN @@CANARY@@.db: slow\n"
+  },
+  {
+    "id": "text-stamp-invalid",
+    "template": "2024-13-01T10:00:00Z INFO @@CANARY@@\n"
+  },
+  {
+    "id": "text-no-header",
+    "template": "@@CANARY@@ something happened\n"
+  },
+  {
+    "id": "text-continuation",
+    "template": "2024-05-01T10:00:00Z ERROR boom\n  File \"@@CANARY@@.py\", line 3\n"
+  },
+  {
+    "id": "text-raw-leading-space",
+    "template": "   @@CANARY@@\nINFO ok\n"
+  },
+  {
+    "id": "text-bracket-level",
+    "template": "[WARN] @@CANARY@@ disk\n"
+  },
+  {
+    "id": "text-crlf",
+    "template": "2024-05-01T10:00:00Z INFO a @@CANARY@@\r\n"
+  }
+]
