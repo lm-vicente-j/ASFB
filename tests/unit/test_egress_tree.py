@@ -57,7 +57,7 @@ def test_depth_64_document_emits() -> None:
     out = emit(doc, vocab=REGISTRY)
     instance = json.loads(out)
     assert _depth_of(instance) == 64
-    assert gate._VALIDATOR.is_valid(instance) is True  # noqa: SLF001
+    assert gate._SPECS[DocV1].validator(instance) is True  # noqa: SLF001
     assert DocV1.model_validate_json(out, strict=True) == doc
 
 
@@ -66,12 +66,16 @@ def test_depth_64_document_emit_is_deterministic() -> None:
     assert emit(doc, vocab=REGISTRY) == emit(doc, vocab=REGISTRY)
 
 
-def test_depth_200_document_is_refused_cleanly() -> None:
-    doc = _doc(_raw_chain(200), validated=False)
+# Where pydantic-core gives up on a too-deep tree depends on its version: 2.14 dumps depth 200 and
+# fails in strict validation (SCHEMA); older builds or deeper trees fail in the dump (SERIALIZE).
+# The property under test is the refusal itself, so either stage is accepted.
+@pytest.mark.parametrize("depth", [200, 500])
+def test_too_deep_document_is_refused_cleanly(depth: int) -> None:
+    doc = _doc(_raw_chain(depth), validated=False)
     with pytest.raises(EgressError) as info:
         emit(doc, vocab=REGISTRY)
-    assert info.value.code is ErrorCode.E_EGRESS_SERIALIZE
-    assert info.value.args == (ErrorCode.E_EGRESS_SERIALIZE.value,)
+    assert info.value.code in {ErrorCode.E_EGRESS_SERIALIZE, ErrorCode.E_EGRESS_SCHEMA}
+    assert info.value.args == (info.value.code.value,)
     assert info.value.__cause__ is None
     assert info.value.__context__ is None
 
@@ -98,7 +102,7 @@ def test_strings_walker_handles_deep_nesting() -> None:
     for _ in range(10000):
         nested = [nested]
     declared = {STUB_VOCAB.id: STUB_VOCAB}
-    assert gate._strings_ok({"body": nested}, declared) is True  # noqa: SLF001
+    assert gate._strings_ok({"body": nested}, declared, gate._SPECS[DocV1]) is True  # noqa: SLF001
 
 
 def test_profile_values_reach_egress() -> None:

@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 from typing import Any, cast
 
 import pytest
@@ -46,7 +47,7 @@ class _SubDoc(DocV1):
 
 
 class _RejectAll:
-    def is_valid(self, instance: object) -> bool:
+    def __call__(self, instance: object) -> bool:
         return False
 
 
@@ -110,7 +111,8 @@ def test_schema_refuses_raw_string_leaf() -> None:
 
 
 def test_jsonschema_refusal_maps_to_code(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(gate, "_VALIDATOR", _RejectAll())
+    rejecting: Any = _RejectAll()
+    monkeypatch.setitem(gate._SPECS, DocV1, replace(gate._SPECS[DocV1], validator=rejecting))  # noqa: SLF001
     with pytest.raises(EgressError) as info:
         emit(DOC, vocab=REGISTRY)
     _assert_clean(info.value, ErrorCode.E_EGRESS_JSONSCHEMA)
@@ -142,7 +144,7 @@ def test_vocab_refusal(doc: DocV1) -> None:
 
 
 def test_string_refusal_maps_to_code(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(gate, "_strings_ok", lambda node, declared: False)
+    monkeypatch.setattr(gate, "_strings_ok", lambda node, declared, spec: False)
     with pytest.raises(EgressError) as info:
         emit(DOC, vocab=REGISTRY)
     _assert_clean(info.value, ErrorCode.E_EGRESS_STRING)
@@ -175,7 +177,7 @@ def test_roundtrip_refusal_maps_to_code(monkeypatch: pytest.MonkeyPatch) -> None
 )
 def test_string_walker_direct(node: object, expected: bool) -> None:
     declared = {STUB_VOCAB.id: STUB_VOCAB}
-    assert gate._strings_ok(node, declared) is expected  # noqa: SLF001
+    assert gate._strings_ok(node, declared, gate._SPECS[DocV1]) is expected  # noqa: SLF001
 
 
 def test_reserializes_direct() -> None:
@@ -202,8 +204,8 @@ def test_token_with_trailing_newline_is_refused() -> None:
 VALID_INSTANCE: dict[str, Any] = json.loads(emit(DOC, vocab=REGISTRY))
 
 
-def test_jsonschema_validator_accepts_emitted_document() -> None:
-    assert gate._VALIDATOR.is_valid(VALID_INSTANCE) is True  # noqa: SLF001
+def test_compiled_validator_accepts_emitted_document() -> None:
+    assert gate._SPECS[DocV1].validator(VALID_INSTANCE) is True  # noqa: SLF001
 
 
 @pytest.mark.parametrize(
@@ -227,12 +229,12 @@ def test_jsonschema_validator_accepts_emitted_document() -> None:
         ),
     ],
 )
-def test_jsonschema_validator_rejects(instance: dict[str, Any]) -> None:
-    assert gate._VALIDATOR.is_valid(instance) is False  # noqa: SLF001
+def test_compiled_validator_rejects(instance: dict[str, Any]) -> None:
+    assert gate._SPECS[DocV1].validator(instance) is False  # noqa: SLF001
 
 
 def test_allowlists_are_pinned() -> None:
-    assert gate._KEYS == frozenset(  # noqa: SLF001
+    assert gate._SPECS[DocV1].keys == frozenset(  # noqa: SLF001
         {
             "id",
             "version",
@@ -260,7 +262,7 @@ def test_allowlists_are_pinned() -> None:
             "fragment",
         }
     )
-    assert gate._WORDS == frozenset(  # noqa: SLF001
+    assert gate._SPECS[DocV1].words == frozenset(  # noqa: SLF001
         {
             "asfb.doc/1",
             "strict",
