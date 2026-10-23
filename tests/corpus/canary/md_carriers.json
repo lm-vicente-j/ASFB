@@ -1,0 +1,114 @@
+[
+  {
+    "id": "md-atx",
+    "template": "# Title @@CANARY@@"
+  },
+  {
+    "id": "md-setext",
+    "template": "Title @@CANARY@@\n===\n"
+  },
+  {
+    "id": "md-paragraph",
+    "template": "Contact @@CANARY@@ today"
+  },
+  {
+    "id": "md-item",
+    "template": "- item @@CANARY@@"
+  },
+  {
+    "id": "md-task",
+    "template": "- [ ] task @@CANARY@@"
+  },
+  {
+    "id": "md-nested-quote",
+    "template": "> > deep @@CANARY@@"
+  },
+  {
+    "id": "md-table-cell",
+    "template": "| a | @@CANARY@@ |\n| - | - |\n| 1 | 2 |"
+  },
+  {
+    "id": "md-table-header",
+    "template": "| @@CANARY@@ | b |\n| - | - |\n| 1 | 2 |"
+  },
+  {
+    "id": "md-code-span",
+    "template": "run `@@CANARY@@` now"
+  },
+  {
+    "id": "md-fenced-code",
+    "template": "```\n@@CANARY@@\n```"
+  },
+  {
+    "id": "md-info-string",
+    "template": "```@@CANARY@@\nx\n```"
+  },
+  {
+    "id": "md-indented-code",
+    "template": "text\n\n    @@CANARY@@"
+  },
+  {
+    "id": "md-link-text",
+    "template": "[@@CANARY@@](https://example.org/)"
+  },
+  {
+    "id": "md-link-host",
+    "template": "[a](https://@@CANARY@@.example.com/x)"
+  },
+  {
+    "id": "md-link-segment",
+    "template": "[a](https://example.org/@@CANARY@@/x)"
+  },
+  {
+    "id": "md-link-query",
+    "template": "[a](https://example.org/x?q=@@CANARY@@)"
+  },
+  {
+    "id": "md-link-fragment",
+    "template": "[a](https://example.org/x#@@CANARY@@)"
+  },
+  {
+    "id": "md-link-title",
+    "template": "[a](/x \"@@CANARY@@\")"
+  },
+  {
+    "id": "md-image-alt",
+    "template": "![@@CANARY@@](/i.png)"
+  },
+  {
+    "id": "md-image-url",
+    "template": "![alt](/@@CANARY@@.png)"
+  },
+  {
+    "id": "md-autolink",
+    "template": "see <https://example.org/@@CANARY@@>"
+  },
+  {
+    "id": "md-linkdef-label",
+    "template": "[@@CANARY@@]: https://example.org/"
+  },
+  {
+    "id": "md-linkdef-dest",
+    "template": "[ref]: https://@@CANARY@@.example.org/"
+  },
+  {
+    "id": "md-linkdef-title",
+    "template": "[ref]: /x \"@@CANARY@@\""
+  },
+  {
+    "id": "md-html",
+    "template": "<span>@@CANARY@@</span>"
+  },
+  {
+    "id": "md-front-matter",
+    "template": "---\n@@CANARY@@: value\n---\n# h"
+  },
+  {
+    "id": "md-escaped",
+    "template": "\\*@@CANARY@@\\*"
+  },
+  {
+    "id": "md-entity-like",
+    "template": "&#99;@@CANARY@@ text"
+  }
+]
