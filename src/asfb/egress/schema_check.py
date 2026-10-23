@@ -7,6 +7,10 @@ time (SchemaError), never ignored. Annotations (title, description, default, dis
 the like) are ignored, as jsonschema ignores them. The subset is checked by differential tests
 against jsonschema on the committed schemas.
 
+One deliberate difference, always on the strict side: jsonschema (Draft 6 and later) takes an
+integer-valued float such as 1.0 as an "integer"; this checker takes only Python ints. It never
+accepts what jsonschema rejects.
+
 The checker walks the whole document in one call. It holds no state between calls and caches no
 results; the only cache is the compiled tree of each $defs entry.
 """
