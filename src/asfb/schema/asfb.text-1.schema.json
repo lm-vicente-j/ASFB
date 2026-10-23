@@ -1,0 +1,123 @@
+{
+  "$defs": {
+    "Profile": {
+      "enum": [
+        "strict",
+        "diffable"
+      ],
+      "title": "Profile",
+      "type": "string"
+    },
+    "TextLine": {
+      "additionalProperties": false,
+      "properties": {
+        "indent": {
+          "maximum": 64,
+          "minimum": 0,
+          "title": "Indent",
+          "type": "integer"
+        },
+        "text": {
+          "pattern": "^t_[0-9a-f]{16}$",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "indent",
+        "text"
+      ],
+      "title": "TextLine",
+      "type": "object"
+    },
+    "TextParagraph": {
+      "additionalProperties": false,
+      "properties": {
+        "lines": {
+          "items": {
+            "$ref": "#/$defs/TextLine"
+          },
+          "maxItems": 20000,
+          "minItems": 1,
+          "title": "Lines",
+          "type": "array"
+        }
+      },
+      "required": [
+        "lines"
+      ],
+      "title": "TextParagraph",
+      "type": "object"
+    },
+    "VocabRef": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9]*(\\.[a-z0-9]+)*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "version": {
+          "maximum": 65535,
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "title": "VocabRef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "eol": {
+      "enum": [
+        "lf",
+        "crlf",
+        "cr",
+        "mixed",
+        "none"
+      ],
+      "title": "Eol",
+      "type": "string"
+    },
+    "paragraphs": {
+      "items": {
+        "$ref": "#/$defs/TextParagraph"
+      },
+      "maxItems": 20000,
+      "title": "Paragraphs",
+      "type": "array"
+    },
+    "profile": {
+      "$ref": "#/$defs/Profile"
+    },
+    "schema_id": {
+      "const": "asfb.text/1",
+      "default": "asfb.text/1",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "vocab": {
+      "items": {
+        "$ref": "#/$defs/VocabRef"
+      },
+      "maxItems": 0,
+      "title": "Vocab",
+      "type": "array"
+    }
+  },
+  "required": [
+    "profile",
+    "vocab",
+    "eol",
+    "paragraphs"
+  ],
+  "title": "TextV1",
+  "type": "object"
+}

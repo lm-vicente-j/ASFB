@@ -1,0 +1,254 @@
+{
+  "$defs": {
+    "Case": {
+      "additionalProperties": false,
+      "description": "One testcase. Class and name are split into tokens; the traceback is never kept.",
+      "properties": {
+        "error_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Error Type"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Message"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Name"
+        },
+        "outcome": {
+          "enum": [
+            "passed",
+            "failed",
+            "error",
+            "skipped"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "params": {
+          "anyOf": [
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Params"
+        },
+        "suite": {
+          "items": {
+            "pattern": "^t_[0-9a-f]{16}$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "title": "Suite",
+          "type": "array"
+        }
+      },
+      "required": [
+        "suite",
+        "name",
+        "params",
+        "outcome",
+        "error_type",
+        "message"
+      ],
+      "title": "Case",
+      "type": "object"
+    },
+    "EnumValue": {
+      "additionalProperties": false,
+      "properties": {
+        "term": {
+          "pattern": "^[!-~]{1,64}$",
+          "title": "Term",
+          "type": "string"
+        },
+        "vocab": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9]*(\\.[a-z0-9]+)*$",
+          "title": "Vocab",
+          "type": "string"
+        }
+      },
+      "required": [
+        "vocab",
+        "term"
+      ],
+      "title": "EnumValue",
+      "type": "object"
+    },
+    "Profile": {
+      "enum": [
+        "strict",
+        "diffable"
+      ],
+      "title": "Profile",
+      "type": "string"
+    },
+    "Totals": {
+      "additionalProperties": false,
+      "properties": {
+        "errors": {
+          "maximum": 1000000,
+          "minimum": 0,
+          "title": "Errors",
+          "type": "integer"
+        },
+        "failures": {
+          "maximum": 1000000,
+          "minimum": 0,
+          "title": "Failures",
+          "type": "integer"
+        },
+        "skipped": {
+          "maximum": 1000000,
+          "minimum": 0,
+          "title": "Skipped",
+          "type": "integer"
+        },
+        "tests": {
+          "maximum": 1000000,
+          "minimum": 0,
+          "title": "Tests",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "tests",
+        "failures",
+        "errors",
+        "skipped"
+      ],
+      "title": "Totals",
+      "type": "object"
+    },
+    "VocabRef": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9]*(\\.[a-z0-9]+)*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "version": {
+          "maximum": 65535,
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "title": "VocabRef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The result of one test run: exit class, report state, totals and the parsed cases.",
+  "properties": {
+    "cases": {
+      "items": {
+        "$ref": "#/$defs/Case"
+      },
+      "maxItems": 10000,
+      "title": "Cases",
+      "type": "array"
+    },
+    "exit": {
+      "enum": [
+        "ok",
+        "tests_failed",
+        "interrupted",
+        "internal_error",
+        "usage_error",
+        "no_tests",
+        "timeout",
+        "other"
+      ],
+      "title": "Exit",
+      "type": "string"
+    },
+    "profile": {
+      "$ref": "#/$defs/Profile"
+    },
+    "report": {
+      "enum": [
+        "parsed",
+        "dropped"
+      ],
+      "title": "Report",
+      "type": "string"
+    },
+    "schema_id": {
+      "const": "asfb.run/1",
+      "default": "asfb.run/1",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "tool": {
+      "$ref": "#/$defs/EnumValue"
+    },
+    "totals": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Totals"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "vocab": {
+      "items": {
+        "$ref": "#/$defs/VocabRef"
+      },
+      "title": "Vocab",
+      "type": "array"
+    }
+  },
+  "required": [
+    "profile",
+    "vocab",
+    "tool",
+    "exit",
+    "report",
+    "totals",
+    "cases"
+  ],
+  "title": "RunV1",
+  "type": "object"
+}

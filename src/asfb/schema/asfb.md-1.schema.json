@@ -1,0 +1,915 @@
+{
+  "$defs": {
+    "CodeBlock": {
+      "additionalProperties": false,
+      "properties": {
+        "fence": {
+          "enum": [
+            "backtick",
+            "tilde",
+            "indent"
+          ],
+          "title": "Fence",
+          "type": "string"
+        },
+        "kind": {
+          "const": "codeblock",
+          "default": "codeblock",
+          "title": "Kind",
+          "type": "string"
+        },
+        "lang": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Lang"
+        },
+        "quote": {
+          "maximum": 16,
+          "minimum": 0,
+          "title": "Quote",
+          "type": "integer"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Text"
+        }
+      },
+      "required": [
+        "quote",
+        "fence",
+        "lang",
+        "text"
+      ],
+      "title": "CodeBlock",
+      "type": "object"
+    },
+    "EnumValue": {
+      "additionalProperties": false,
+      "properties": {
+        "term": {
+          "pattern": "^[!-~]{1,64}$",
+          "title": "Term",
+          "type": "string"
+        },
+        "vocab": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9]*(\\.[a-z0-9]+)*$",
+          "title": "Vocab",
+          "type": "string"
+        }
+      },
+      "required": [
+        "vocab",
+        "term"
+      ],
+      "title": "EnumValue",
+      "type": "object"
+    },
+    "FrontMatter": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "frontmatter",
+          "default": "frontmatter",
+          "title": "Kind",
+          "type": "string"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Text"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "FrontMatter",
+      "type": "object"
+    },
+    "Heading": {
+      "additionalProperties": false,
+      "properties": {
+        "inlines": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "autolink": "#/$defs/MdAutolink",
+                "code": "#/$defs/MdCode",
+                "image": "#/$defs/MdImage",
+                "link": "#/$defs/MdLink",
+                "text": "#/$defs/MdText"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/MdText"
+              },
+              {
+                "$ref": "#/$defs/MdCode"
+              },
+              {
+                "$ref": "#/$defs/MdLink"
+              },
+              {
+                "$ref": "#/$defs/MdImage"
+              },
+              {
+                "$ref": "#/$defs/MdAutolink"
+              }
+            ]
+          },
+          "maxItems": 1024,
+          "title": "Inlines",
+          "type": "array"
+        },
+        "kind": {
+          "const": "heading",
+          "default": "heading",
+          "title": "Kind",
+          "type": "string"
+        },
+        "level": {
+          "maximum": 6,
+          "minimum": 1,
+          "title": "Level",
+          "type": "integer"
+        },
+        "quote": {
+          "maximum": 16,
+          "minimum": 0,
+          "title": "Quote",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "quote",
+        "level",
+        "inlines"
+      ],
+      "title": "Heading",
+      "type": "object"
+    },
+    "HtmlBlock": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "html",
+          "default": "html",
+          "title": "Kind",
+          "type": "string"
+        },
+        "quote": {
+          "maximum": 16,
+          "minimum": 0,
+          "title": "Quote",
+          "type": "integer"
+        },
+        "text": {
+          "pattern": "^t_[0-9a-f]{16}$",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "quote",
+        "text"
+      ],
+      "title": "HtmlBlock",
+      "type": "object"
+    },
+    "Item": {
+      "additionalProperties": false,
+      "properties": {
+        "depth": {
+          "maximum": 16,
+          "minimum": 0,
+          "title": "Depth",
+          "type": "integer"
+        },
+        "inlines": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "autolink": "#/$defs/MdAutolink",
+                "code": "#/$defs/MdCode",
+                "image": "#/$defs/MdImage",
+                "link": "#/$defs/MdLink",
+                "text": "#/$defs/MdText"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/MdText"
+              },
+              {
+                "$ref": "#/$defs/MdCode"
+              },
+              {
+                "$ref": "#/$defs/MdLink"
+              },
+              {
+                "$ref": "#/$defs/MdImage"
+              },
+              {
+                "$ref": "#/$defs/MdAutolink"
+              }
+            ]
+          },
+          "maxItems": 1024,
+          "title": "Inlines",
+          "type": "array"
+        },
+        "kind": {
+          "const": "item",
+          "default": "item",
+          "title": "Kind",
+          "type": "string"
+        },
+        "ordered": {
+          "title": "Ordered",
+          "type": "boolean"
+        },
+        "quote": {
+          "maximum": 16,
+          "minimum": 0,
+          "title": "Quote",
+          "type": "integer"
+        },
+        "task": {
+          "enum": [
+            "none",
+            "open",
+            "done"
+          ],
+          "title": "Task",
+          "type": "string"
+        }
+      },
+      "required": [
+        "quote",
+        "depth",
+        "ordered",
+        "task",
+        "inlines"
+      ],
+      "title": "Item",
+      "type": "object"
+    },
+    "LinkDef": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "linkdef",
+          "default": "linkdef",
+          "title": "Kind",
+          "type": "string"
+        },
+        "label": {
+          "pattern": "^t_[0-9a-f]{16}$",
+          "title": "Label",
+          "type": "string"
+        },
+        "quote": {
+          "maximum": 16,
+          "minimum": 0,
+          "title": "Quote",
+          "type": "integer"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Title"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Url"
+            },
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Url"
+        }
+      },
+      "required": [
+        "quote",
+        "label",
+        "url",
+        "title"
+      ],
+      "title": "LinkDef",
+      "type": "object"
+    },
+    "MdAutolink": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "autolink",
+          "default": "autolink",
+          "title": "Kind",
+          "type": "string"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Url"
+            },
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            }
+          ],
+          "title": "Url"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "title": "MdAutolink",
+      "type": "object"
+    },
+    "MdCode": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "code",
+          "default": "code",
+          "title": "Kind",
+          "type": "string"
+        },
+        "text": {
+          "pattern": "^t_[0-9a-f]{16}$",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "MdCode",
+      "type": "object"
+    },
+    "MdImage": {
+      "additionalProperties": false,
+      "properties": {
+        "alt": {
+          "anyOf": [
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Alt"
+        },
+        "kind": {
+          "const": "image",
+          "default": "image",
+          "title": "Kind",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Title"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Url"
+            },
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Url"
+        }
+      },
+      "required": [
+        "alt",
+        "url",
+        "title"
+      ],
+      "title": "MdImage",
+      "type": "object"
+    },
+    "MdLink": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "link",
+          "default": "link",
+          "title": "Kind",
+          "type": "string"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Text"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Title"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Url"
+            },
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Url"
+        }
+      },
+      "required": [
+        "text",
+        "url",
+        "title"
+      ],
+      "title": "MdLink",
+      "type": "object"
+    },
+    "MdText": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "text",
+          "default": "text",
+          "title": "Kind",
+          "type": "string"
+        },
+        "text": {
+          "pattern": "^t_[0-9a-f]{16}$",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "MdText",
+      "type": "object"
+    },
+    "Paragraph": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "paragraph",
+          "default": "paragraph",
+          "title": "Kind",
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "autolink": "#/$defs/MdAutolink",
+                  "code": "#/$defs/MdCode",
+                  "image": "#/$defs/MdImage",
+                  "link": "#/$defs/MdLink",
+                  "text": "#/$defs/MdText"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/MdText"
+                },
+                {
+                  "$ref": "#/$defs/MdCode"
+                },
+                {
+                  "$ref": "#/$defs/MdLink"
+                },
+                {
+                  "$ref": "#/$defs/MdImage"
+                },
+                {
+                  "$ref": "#/$defs/MdAutolink"
+                }
+              ]
+            },
+            "maxItems": 1024,
+            "type": "array"
+          },
+          "maxItems": 10000,
+          "minItems": 1,
+          "title": "Lines",
+          "type": "array"
+        },
+        "quote": {
+          "maximum": 16,
+          "minimum": 0,
+          "title": "Quote",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "quote",
+        "lines"
+      ],
+      "title": "Paragraph",
+      "type": "object"
+    },
+    "Profile": {
+      "enum": [
+        "strict",
+        "diffable"
+      ],
+      "title": "Profile",
+      "type": "string"
+    },
+    "Rule": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "rule",
+          "default": "rule",
+          "title": "Kind",
+          "type": "string"
+        },
+        "quote": {
+          "maximum": 16,
+          "minimum": 0,
+          "title": "Quote",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "quote"
+      ],
+      "title": "Rule",
+      "type": "object"
+    },
+    "Table": {
+      "additionalProperties": false,
+      "properties": {
+        "align": {
+          "items": {
+            "enum": [
+              "none",
+              "left",
+              "center",
+              "right"
+            ],
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Align",
+          "type": "array"
+        },
+        "header": {
+          "items": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "autolink": "#/$defs/MdAutolink",
+                  "code": "#/$defs/MdCode",
+                  "image": "#/$defs/MdImage",
+                  "link": "#/$defs/MdLink",
+                  "text": "#/$defs/MdText"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/MdText"
+                },
+                {
+                  "$ref": "#/$defs/MdCode"
+                },
+                {
+                  "$ref": "#/$defs/MdLink"
+                },
+                {
+                  "$ref": "#/$defs/MdImage"
+                },
+                {
+                  "$ref": "#/$defs/MdAutolink"
+                }
+              ]
+            },
+            "maxItems": 1024,
+            "type": "array"
+          },
+          "maxItems": 64,
+          "title": "Header",
+          "type": "array"
+        },
+        "kind": {
+          "const": "table",
+          "default": "table",
+          "title": "Kind",
+          "type": "string"
+        },
+        "quote": {
+          "maximum": 16,
+          "minimum": 0,
+          "title": "Quote",
+          "type": "integer"
+        },
+        "rows": {
+          "items": {
+            "items": {
+              "items": {
+                "discriminator": {
+                  "mapping": {
+                    "autolink": "#/$defs/MdAutolink",
+                    "code": "#/$defs/MdCode",
+                    "image": "#/$defs/MdImage",
+                    "link": "#/$defs/MdLink",
+                    "text": "#/$defs/MdText"
+                  },
+                  "propertyName": "kind"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/MdText"
+                  },
+                  {
+                    "$ref": "#/$defs/MdCode"
+                  },
+                  {
+                    "$ref": "#/$defs/MdLink"
+                  },
+                  {
+                    "$ref": "#/$defs/MdImage"
+                  },
+                  {
+                    "$ref": "#/$defs/MdAutolink"
+                  }
+                ]
+              },
+              "maxItems": 1024,
+              "type": "array"
+            },
+            "maxItems": 64,
+            "type": "array"
+          },
+          "maxItems": 10000,
+          "title": "Rows",
+          "type": "array"
+        }
+      },
+      "required": [
+        "quote",
+        "align",
+        "header",
+        "rows"
+      ],
+      "title": "Table",
+      "type": "object"
+    },
+    "Url": {
+      "additionalProperties": false,
+      "properties": {
+        "authority": {
+          "anyOf": [
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Authority"
+        },
+        "fragment": {
+          "anyOf": [
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fragment"
+        },
+        "path": {
+          "default": [],
+          "items": {
+            "pattern": "^t_[0-9a-f]{16}$",
+            "type": "string"
+          },
+          "maxItems": 256,
+          "title": "Path",
+          "type": "array"
+        },
+        "query": {
+          "anyOf": [
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query"
+        },
+        "rooted": {
+          "default": false,
+          "title": "Rooted",
+          "type": "boolean"
+        },
+        "scheme": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "trailing_slash": {
+          "default": false,
+          "title": "Trailing Slash",
+          "type": "boolean"
+        }
+      },
+      "title": "Url",
+      "type": "object"
+    },
+    "VocabRef": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9]*(\\.[a-z0-9]+)*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "version": {
+          "maximum": 65535,
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "title": "VocabRef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "blocks": {
+      "items": {
+        "discriminator": {
+          "mapping": {
+            "codeblock": "#/$defs/CodeBlock",
+            "frontmatter": "#/$defs/FrontMatter",
+            "heading": "#/$defs/Heading",
+            "html": "#/$defs/HtmlBlock",
+            "item": "#/$defs/Item",
+            "linkdef": "#/$defs/LinkDef",
+            "paragraph": "#/$defs/Paragraph",
+            "rule": "#/$defs/Rule",
+            "table": "#/$defs/Table"
+          },
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/Heading"
+          },
+          {
+            "$ref": "#/$defs/Paragraph"
+          },
+          {
+            "$ref": "#/$defs/Item"
+          },
+          {
+            "$ref": "#/$defs/CodeBlock"
+          },
+          {
+            "$ref": "#/$defs/Table"
+          },
+          {
+            "$ref": "#/$defs/Rule"
+          },
+          {
+            "$ref": "#/$defs/HtmlBlock"
+          },
+          {
+            "$ref": "#/$defs/FrontMatter"
+          },
+          {
+            "$ref": "#/$defs/LinkDef"
+          }
+        ]
+      },
+      "maxItems": 20000,
+      "title": "Blocks",
+      "type": "array"
+    },
+    "profile": {
+      "$ref": "#/$defs/Profile"
+    },
+    "schema_id": {
+      "const": "asfb.md/1",
+      "default": "asfb.md/1",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "vocab": {
+      "items": {
+        "$ref": "#/$defs/VocabRef"
+      },
+      "title": "Vocab",
+      "type": "array"
+    }
+  },
+  "required": [
+    "profile",
+    "vocab",
+    "blocks"
+  ],
+  "title": "MdV1",
+  "type": "object"
+}

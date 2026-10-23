@@ -1,0 +1,399 @@
+{
+  "$defs": {
+    "Bucket": {
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "maximum": 64,
+          "minimum": 0,
+          "title": "Index",
+          "type": "integer"
+        },
+        "scheme": {
+          "$ref": "#/$defs/BucketScheme"
+        }
+      },
+      "required": [
+        "scheme",
+        "index"
+      ],
+      "title": "Bucket",
+      "type": "object"
+    },
+    "BucketScheme": {
+      "enum": [
+        "log2"
+      ],
+      "title": "BucketScheme",
+      "type": "string"
+    },
+    "DbColumn": {
+      "additionalProperties": false,
+      "properties": {
+        "affinity": {
+          "$ref": "#/$defs/EnumValue"
+        },
+        "declared": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Declared"
+        },
+        "default": {
+          "title": "Default",
+          "type": "boolean"
+        },
+        "foreign_keys": {
+          "items": {
+            "$ref": "#/$defs/DbForeignKey"
+          },
+          "maxItems": 2000,
+          "title": "Foreign Keys",
+          "type": "array"
+        },
+        "hidden": {
+          "enum": [
+            "normal",
+            "hidden",
+            "generated_virtual",
+            "generated_stored"
+          ],
+          "title": "Hidden",
+          "type": "string"
+        },
+        "name": {
+          "pattern": "^t_[0-9a-f]{16}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "notnull": {
+          "title": "Notnull",
+          "type": "boolean"
+        },
+        "pk": {
+          "maximum": 2000,
+          "minimum": 0,
+          "title": "Pk",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "declared",
+        "affinity",
+        "notnull",
+        "pk",
+        "default",
+        "hidden",
+        "foreign_keys"
+      ],
+      "title": "DbColumn",
+      "type": "object"
+    },
+    "DbForeignKey": {
+      "additionalProperties": false,
+      "description": "A foreign key of a column: the target table name and column (None: the target's key).",
+      "properties": {
+        "column": {
+          "anyOf": [
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Column"
+        },
+        "table": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            }
+          ],
+          "title": "Table"
+        }
+      },
+      "required": [
+        "table",
+        "column"
+      ],
+      "title": "DbForeignKey",
+      "type": "object"
+    },
+    "DbIndex": {
+      "additionalProperties": false,
+      "properties": {
+        "columns": {
+          "items": {
+            "anyOf": [
+              {
+                "pattern": "^t_[0-9a-f]{16}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "maxItems": 2000,
+          "title": "Columns",
+          "type": "array"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            }
+          ],
+          "title": "Name"
+        },
+        "unique": {
+          "title": "Unique",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "unique",
+        "columns"
+      ],
+      "title": "DbIndex",
+      "type": "object"
+    },
+    "DbTable": {
+      "additionalProperties": false,
+      "properties": {
+        "columns": {
+          "items": {
+            "$ref": "#/$defs/DbColumn"
+          },
+          "maxItems": 2000,
+          "title": "Columns",
+          "type": "array"
+        },
+        "indexes": {
+          "items": {
+            "$ref": "#/$defs/DbIndex"
+          },
+          "maxItems": 5000,
+          "title": "Indexes",
+          "type": "array"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            }
+          ],
+          "title": "Name"
+        },
+        "rows": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Bucket"
+            },
+            {
+              "const": "unknown",
+              "type": "string"
+            }
+          ],
+          "title": "Rows"
+        },
+        "without_rowid": {
+          "title": "Without Rowid",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "without_rowid",
+        "rows",
+        "columns",
+        "indexes"
+      ],
+      "title": "DbTable",
+      "type": "object"
+    },
+    "DbTrigger": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            }
+          ],
+          "title": "Name"
+        },
+        "table": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            }
+          ],
+          "title": "Table"
+        }
+      },
+      "required": [
+        "name",
+        "table"
+      ],
+      "title": "DbTrigger",
+      "type": "object"
+    },
+    "EnumValue": {
+      "additionalProperties": false,
+      "properties": {
+        "term": {
+          "pattern": "^[!-~]{1,64}$",
+          "title": "Term",
+          "type": "string"
+        },
+        "vocab": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9]*(\\.[a-z0-9]+)*$",
+          "title": "Vocab",
+          "type": "string"
+        }
+      },
+      "required": [
+        "vocab",
+        "term"
+      ],
+      "title": "EnumValue",
+      "type": "object"
+    },
+    "Profile": {
+      "enum": [
+        "strict",
+        "diffable"
+      ],
+      "title": "Profile",
+      "type": "string"
+    },
+    "VocabRef": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9]*(\\.[a-z0-9]+)*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "version": {
+          "maximum": 65535,
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "title": "VocabRef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "page_size": {
+      "$ref": "#/$defs/Bucket"
+    },
+    "profile": {
+      "$ref": "#/$defs/Profile"
+    },
+    "schema_id": {
+      "const": "asfb.db/1",
+      "default": "asfb.db/1",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "tables": {
+      "items": {
+        "$ref": "#/$defs/DbTable"
+      },
+      "maxItems": 1000,
+      "title": "Tables",
+      "type": "array"
+    },
+    "triggers": {
+      "items": {
+        "$ref": "#/$defs/DbTrigger"
+      },
+      "maxItems": 1000,
+      "title": "Triggers",
+      "type": "array"
+    },
+    "views": {
+      "items": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/EnumValue"
+          },
+          {
+            "pattern": "^t_[0-9a-f]{16}$",
+            "type": "string"
+          }
+        ]
+      },
+      "maxItems": 1000,
+      "title": "Views",
+      "type": "array"
+    },
+    "vocab": {
+      "items": {
+        "$ref": "#/$defs/VocabRef"
+      },
+      "maxItems": 2,
+      "title": "Vocab",
+      "type": "array"
+    },
+    "wal_present": {
+      "title": "Wal Present",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "profile",
+    "vocab",
+    "wal_present",
+    "page_size",
+    "tables",
+    "views",
+    "triggers"
+  ],
+  "title": "DbV1",
+  "type": "object"
+}

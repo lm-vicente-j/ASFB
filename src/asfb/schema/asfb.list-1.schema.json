@@ -1,0 +1,116 @@
+{
+  "$defs": {
+    "ListEntry": {
+      "additionalProperties": false,
+      "description": "One document: its id, its path segments (tokens, file stem last) and its extension.",
+      "properties": {
+        "doc": {
+          "pattern": "^d_[0-9a-f]{16}$",
+          "title": "Doc",
+          "type": "string"
+        },
+        "ext": {
+          "enum": [
+            "html",
+            "htm",
+            "txt",
+            "md",
+            "markdown",
+            "py",
+            "pyi",
+            "log",
+            "jsonl",
+            "ndjson",
+            "db",
+            "sqlite",
+            "sqlite3"
+          ],
+          "title": "Ext",
+          "type": "string"
+        },
+        "path": {
+          "items": {
+            "pattern": "^t_[0-9a-f]{16}$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "title": "Path",
+          "type": "array"
+        }
+      },
+      "required": [
+        "doc",
+        "path",
+        "ext"
+      ],
+      "title": "ListEntry",
+      "type": "object"
+    },
+    "Profile": {
+      "enum": [
+        "strict",
+        "diffable"
+      ],
+      "title": "Profile",
+      "type": "string"
+    },
+    "VocabRef": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9]*(\\.[a-z0-9]+)*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "version": {
+          "maximum": 65535,
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "title": "VocabRef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "entries": {
+      "items": {
+        "$ref": "#/$defs/ListEntry"
+      },
+      "maxItems": 10000,
+      "title": "Entries",
+      "type": "array"
+    },
+    "profile": {
+      "$ref": "#/$defs/Profile"
+    },
+    "schema_id": {
+      "const": "asfb.list/1",
+      "default": "asfb.list/1",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "vocab": {
+      "items": {
+        "$ref": "#/$defs/VocabRef"
+      },
+      "maxItems": 0,
+      "title": "Vocab",
+      "type": "array"
+    }
+  },
+  "required": [
+    "profile",
+    "vocab",
+    "entries"
+  ],
+  "title": "ListV1",
+  "type": "object"
+}

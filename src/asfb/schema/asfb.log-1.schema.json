@@ -1,0 +1,309 @@
+{
+  "$defs": {
+    "Bucket": {
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "maximum": 64,
+          "minimum": 0,
+          "title": "Index",
+          "type": "integer"
+        },
+        "scheme": {
+          "$ref": "#/$defs/BucketScheme"
+        }
+      },
+      "required": [
+        "scheme",
+        "index"
+      ],
+      "title": "Bucket",
+      "type": "object"
+    },
+    "BucketScheme": {
+      "enum": [
+        "log2"
+      ],
+      "title": "BucketScheme",
+      "type": "string"
+    },
+    "EnumValue": {
+      "additionalProperties": false,
+      "properties": {
+        "term": {
+          "pattern": "^[!-~]{1,64}$",
+          "title": "Term",
+          "type": "string"
+        },
+        "vocab": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9]*(\\.[a-z0-9]+)*$",
+          "title": "Vocab",
+          "type": "string"
+        }
+      },
+      "required": [
+        "vocab",
+        "term"
+      ],
+      "title": "EnumValue",
+      "type": "object"
+    },
+    "LogField": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            }
+          ],
+          "title": "Name"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "$ref": "#/$defs/LogNumber"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/LogGroup"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "name",
+        "value"
+      ],
+      "title": "LogField",
+      "type": "object"
+    },
+    "LogGroup": {
+      "additionalProperties": false,
+      "properties": {
+        "fields": {
+          "items": {
+            "$ref": "#/$defs/LogField"
+          },
+          "maxItems": 256,
+          "title": "Fields",
+          "type": "array"
+        }
+      },
+      "required": [
+        "fields"
+      ],
+      "title": "LogGroup",
+      "type": "object"
+    },
+    "LogNumber": {
+      "additionalProperties": false,
+      "properties": {
+        "bucket": {
+          "$ref": "#/$defs/Bucket"
+        },
+        "sign": {
+          "enum": [
+            "neg",
+            "pos"
+          ],
+          "title": "Sign",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sign",
+        "bucket"
+      ],
+      "title": "LogNumber",
+      "type": "object"
+    },
+    "LogRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "fields": {
+          "items": {
+            "$ref": "#/$defs/LogField"
+          },
+          "maxItems": 256,
+          "title": "Fields",
+          "type": "array"
+        },
+        "level": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "message": {
+          "anyOf": [
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Message"
+        },
+        "time": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LogTime"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "level",
+        "time",
+        "message",
+        "fields"
+      ],
+      "title": "LogRecord",
+      "type": "object"
+    },
+    "LogTime": {
+      "additionalProperties": false,
+      "description": "The step from the previous timed record: index is the bit count of the delta in ms.",
+      "properties": {
+        "backwards": {
+          "title": "Backwards",
+          "type": "boolean"
+        },
+        "index": {
+          "maximum": 64,
+          "minimum": 0,
+          "title": "Index",
+          "type": "integer"
+        },
+        "scheme": {
+          "const": "log2",
+          "default": "log2",
+          "title": "Scheme",
+          "type": "string"
+        },
+        "unit": {
+          "const": "ms",
+          "default": "ms",
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "index",
+        "backwards"
+      ],
+      "title": "LogTime",
+      "type": "object"
+    },
+    "Profile": {
+      "enum": [
+        "strict",
+        "diffable"
+      ],
+      "title": "Profile",
+      "type": "string"
+    },
+    "VocabRef": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9]*(\\.[a-z0-9]+)*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "version": {
+          "maximum": 65535,
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "title": "VocabRef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "enum": [
+        "jsonl",
+        "text"
+      ],
+      "title": "Format",
+      "type": "string"
+    },
+    "profile": {
+      "$ref": "#/$defs/Profile"
+    },
+    "raw": {
+      "maximum": 200000,
+      "minimum": 0,
+      "title": "Raw",
+      "type": "integer"
+    },
+    "records": {
+      "items": {
+        "$ref": "#/$defs/LogRecord"
+      },
+      "maxItems": 200000,
+      "title": "Records",
+      "type": "array"
+    },
+    "schema_id": {
+      "const": "asfb.log/1",
+      "default": "asfb.log/1",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "vocab": {
+      "items": {
+        "$ref": "#/$defs/VocabRef"
+      },
+      "maxItems": 3,
+      "title": "Vocab",
+      "type": "array"
+    }
+  },
+  "required": [
+    "profile",
+    "format",
+    "vocab",
+    "raw",
+    "records"
+  ],
+  "title": "LogV1",
+  "type": "object"
+}

@@ -1,0 +1,160 @@
+{
+  "$defs": {
+    "Hunk": {
+      "additionalProperties": false,
+      "description": "One differing range: a_start..a_end of the first view, b_start..b_end of the second.",
+      "properties": {
+        "a_end": {
+          "maximum": 1000000,
+          "minimum": 0,
+          "title": "A End",
+          "type": "integer"
+        },
+        "a_start": {
+          "maximum": 1000000,
+          "minimum": 0,
+          "title": "A Start",
+          "type": "integer"
+        },
+        "b_end": {
+          "maximum": 1000000,
+          "minimum": 0,
+          "title": "B End",
+          "type": "integer"
+        },
+        "b_start": {
+          "maximum": 1000000,
+          "minimum": 0,
+          "title": "B Start",
+          "type": "integer"
+        },
+        "op": {
+          "enum": [
+            "insert",
+            "delete",
+            "replace"
+          ],
+          "title": "Op",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op",
+        "a_start",
+        "a_end",
+        "b_start",
+        "b_end"
+      ],
+      "title": "Hunk",
+      "type": "object"
+    },
+    "Profile": {
+      "enum": [
+        "strict",
+        "diffable"
+      ],
+      "title": "Profile",
+      "type": "string"
+    },
+    "RefV1": {
+      "additionalProperties": false,
+      "properties": {
+        "doc": {
+          "pattern": "^d_[0-9a-f]{16}$",
+          "title": "Doc",
+          "type": "string"
+        },
+        "revision": {
+          "maximum": 999999,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "doc",
+        "revision"
+      ],
+      "title": "RefV1",
+      "type": "object"
+    },
+    "VocabRef": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9]*(\\.[a-z0-9]+)*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "version": {
+          "maximum": 65535,
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "title": "VocabRef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Hunks index the lines of two censored views, the lexemes of two Python sources or the\nrecords of two logs.",
+  "properties": {
+    "a": {
+      "$ref": "#/$defs/RefV1"
+    },
+    "b": {
+      "$ref": "#/$defs/RefV1"
+    },
+    "hunks": {
+      "items": {
+        "$ref": "#/$defs/Hunk"
+      },
+      "maxItems": 10000,
+      "title": "Hunks",
+      "type": "array"
+    },
+    "profile": {
+      "$ref": "#/$defs/Profile"
+    },
+    "schema_id": {
+      "const": "asfb.diff/1",
+      "default": "asfb.diff/1",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "units": {
+      "default": "line",
+      "enum": [
+        "line",
+        "lexeme",
+        "record",
+        "schema"
+      ],
+      "title": "Units",
+      "type": "string"
+    },
+    "vocab": {
+      "items": {
+        "$ref": "#/$defs/VocabRef"
+      },
+      "maxItems": 0,
+      "title": "Vocab",
+      "type": "array"
+    }
+  },
+  "required": [
+    "profile",
+    "vocab",
+    "a",
+    "b",
+    "hunks"
+  ],
+  "title": "DiffV1",
+  "type": "object"
+}

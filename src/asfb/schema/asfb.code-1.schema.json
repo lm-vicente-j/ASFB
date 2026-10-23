@@ -1,0 +1,277 @@
+{
+  "$defs": {
+    "EnumValue": {
+      "additionalProperties": false,
+      "properties": {
+        "term": {
+          "pattern": "^[!-~]{1,64}$",
+          "title": "Term",
+          "type": "string"
+        },
+        "vocab": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9]*(\\.[a-z0-9]+)*$",
+          "title": "Vocab",
+          "type": "string"
+        }
+      },
+      "required": [
+        "vocab",
+        "term"
+      ],
+      "title": "EnumValue",
+      "type": "object"
+    },
+    "Lexeme": {
+      "additionalProperties": false,
+      "properties": {
+        "depth": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Depth"
+        },
+        "kind": {
+          "enum": [
+            "keyword",
+            "builtin",
+            "stdlib",
+            "exception",
+            "op",
+            "name",
+            "number",
+            "string",
+            "comment",
+            "newline",
+            "indent",
+            "dedent"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "line": {
+          "maximum": 20000,
+          "minimum": 1,
+          "title": "Line",
+          "type": "integer"
+        },
+        "prefix": {
+          "anyOf": [
+            {
+              "enum": [
+                "str",
+                "bytes",
+                "fstring",
+                "raw"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Prefix"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "pattern": "^t_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "!",
+                "!=",
+                "%",
+                "%=",
+                "&",
+                "&=",
+                "(",
+                ")",
+                "*",
+                "**",
+                "**=",
+                "*=",
+                "+",
+                "+=",
+                ",",
+                "-",
+                "-=",
+                "->",
+                ".",
+                "...",
+                "/",
+                "//",
+                "//=",
+                "/=",
+                ":",
+                ":=",
+                ";",
+                "<",
+                "<<",
+                "<<=",
+                "<=",
+                "=",
+                "==",
+                ">",
+                ">=",
+                ">>",
+                ">>=",
+                "@",
+                "@=",
+                "[",
+                "]",
+                "^",
+                "^=",
+                "{",
+                "|",
+                "|=",
+                "}",
+                "~"
+              ],
+              "type": "string"
+            },
+            {
+              "enum": [
+                "0",
+                "1"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "line",
+        "kind",
+        "value",
+        "prefix",
+        "depth"
+      ],
+      "title": "Lexeme",
+      "type": "object"
+    },
+    "Profile": {
+      "enum": [
+        "strict",
+        "diffable"
+      ],
+      "title": "Profile",
+      "type": "string"
+    },
+    "VocabRef": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9]*(\\.[a-z0-9]+)*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "version": {
+          "maximum": 65535,
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "title": "VocabRef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "dropped": {
+      "maximum": 1048576,
+      "minimum": 0,
+      "title": "Dropped",
+      "type": "integer"
+    },
+    "ext": {
+      "anyOf": [
+        {
+          "enum": [
+            "py",
+            "pyi"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Ext"
+    },
+    "file": {
+      "anyOf": [
+        {
+          "pattern": "^t_[0-9a-f]{16}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "File"
+    },
+    "language": {
+      "const": "python",
+      "default": "python",
+      "title": "Language",
+      "type": "string"
+    },
+    "lexemes": {
+      "items": {
+        "$ref": "#/$defs/Lexeme"
+      },
+      "maxItems": 50000,
+      "title": "Lexemes",
+      "type": "array"
+    },
+    "profile": {
+      "$ref": "#/$defs/Profile"
+    },
+    "schema_id": {
+      "const": "asfb.code/1",
+      "default": "asfb.code/1",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "vocab": {
+      "items": {
+        "$ref": "#/$defs/VocabRef"
+      },
+      "maxItems": 4,
+      "title": "Vocab",
+      "type": "array"
+    }
+  },
+  "required": [
+    "profile",
+    "vocab",
+    "file",
+    "ext",
+    "dropped",
+    "lexemes"
+  ],
+  "title": "CodeV1",
+  "type": "object"
+}

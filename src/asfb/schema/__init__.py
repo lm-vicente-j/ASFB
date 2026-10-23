@@ -1,3 +1,11 @@
-"""Closed document schema, version 1, and its committed JSON Schema file."""
+"""Closed document schemas, version 1, and their committed JSON Schema files."""
 
 SCHEMA_RESOURCE = "asfb.doc-1.schema.json"
+LIST_RESOURCE = "asfb.list-1.schema.json"
+DIFF_RESOURCE = "asfb.diff-1.schema.json"
+RUN_RESOURCE = "asfb.run-1.schema.json"
+TEXT_RESOURCE = "asfb.text-1.schema.json"
+MD_RESOURCE = "asfb.md-1.schema.json"
+CODE_RESOURCE = "asfb.code-1.schema.json"
+LOG_RESOURCE = "asfb.log-1.schema.json"
+DB_RESOURCE = "asfb.db-1.schema.json"
