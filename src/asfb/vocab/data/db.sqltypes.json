@@ -1,0 +1,31 @@
+{
+  "id": "db.sqltypes",
+  "version": 1,
+  "source": {
+    "tool": "SQLite",
+    "version": "3.54.0"
+  },
+  "sha256": "4de351980219ce097539d8aee755bcbe9d82fe72476fa83e458498687ec46fa5",
+  "terms": [
+    "BIGINT",
+    "BLOB",
+    "BOOLEAN",
+    "CHAR",
+    "CLOB",
+    "DATE",
+    "DATETIME",
+    "DECIMAL",
+    "DOUBLE",
+    "FLOAT",
+    "INT",
+    "INTEGER",
+    "JSON",
+    "NUMERIC",
+    "REAL",
+    "SMALLINT",
+    "TEXT",
+    "TIMESTAMP",
+    "TINYINT",
+    "VARCHAR"
+  ]
+}

@@ -1,0 +1,98 @@
+[
+  {
+    "id": "table-name",
+    "template": "CREATE TABLE \"@@CANARY@@\" (id INTEGER);"
+  },
+  {
+    "id": "table-name-quoted",
+    "template": "CREATE TABLE \"x\"\"@@CANARY@@\"(a);"
+  },
+  {
+    "id": "column-name",
+    "template": "CREATE TABLE t (\"@@CANARY@@\" TEXT);"
+  },
+  {
+    "id": "index-name",
+    "template": "CREATE TABLE t(a); CREATE INDEX \"idx_@@CANARY@@\" ON t(a);"
+  },
+  {
+    "id": "index-expression",
+    "template": "CREATE TABLE t(a); CREATE INDEX i ON t(lower('@@CANARY@@'));"
+  },
+  {
+    "id": "index-where",
+    "template": "CREATE TABLE t(a); CREATE INDEX i ON t(a) WHERE a <> '@@CANARY@@';"
+  },
+  {
+    "id": "view-name",
+    "template": "CREATE TABLE t(a); CREATE VIEW \"v_@@CANARY@@\" AS SELECT a FROM t;"
+  },
+  {
+    "id": "view-body",
+    "template": "CREATE TABLE t(a); CREATE VIEW v AS SELECT a, '@@CANARY@@' AS x FROM t;"
+  },
+  {
+    "id": "trigger-name",
+    "template": "CREATE TABLE t(a); CREATE TRIGGER \"tr_@@CANARY@@\" AFTER INSERT ON t BEGIN SELECT 1; END;"
+  },
+  {
+    "id": "trigger-body",
+    "template": "CREATE TABLE t(a); CREATE TRIGGER g AFTER INSERT ON t BEGIN SELECT '@@CANARY@@'; END;"
+  },
+  {
+    "id": "trigger-when",
+    "template": "CREATE TABLE t(a); CREATE TRIGGER g AFTER INSERT ON t WHEN new.a <> '@@CANARY@@' BEGIN SELECT 1; END;"
+  },
+  {
+    "id": "check-expression",
+    "template": "CREATE TABLE t(a TEXT CHECK (a <> '@@CANARY@@'));"
+  },
+  {
+    "id": "check-name",
+    "template": "CREATE TABLE t(a INT CONSTRAINT \"@@CANARY@@\" CHECK (a > 0));"
+  },
+  {
+    "id": "default-literal",
+    "template": "CREATE TABLE t(a TEXT DEFAULT '@@CANARY@@');"
+  },
+  {
+    "id": "generated-expression",
+    "template": "CREATE TABLE t(a TEXT, b TEXT GENERATED ALWAYS AS ('@@CANARY@@' || a) VIRTUAL);"
+  },
+  {
+    "id": "declared-type-name",
+    "template": "CREATE TABLE t(a \"@@CANARY@@\");"
+  },
+  {
+    "id": "declared-type-params",
+    "template": "CREATE TABLE t(a VARCHAR(255) /* @@CANARY@@ */);"
+  },
+  {
+    "id": "foreign-key-target",
+    "template": "CREATE TABLE \"@@CANARY@@\"(id INTEGER PRIMARY KEY); CREATE TABLE t(a REFERENCES \"@@CANARY@@\"(id));"
+  },
+  {
+    "id": "comment",
+    "template": "CREATE TABLE t(a) /* @@CANARY@@ */;"
+  },
+  {
+    "id": "row-value",
+    "template": "CREATE TABLE t(a TEXT); INSERT INTO t VALUES ('@@CANARY@@');"
+  },
+  {
+    "id": "virtual-table-name",
+    "template": "CREATE VIRTUAL TABLE \"@@CANARY@@\" USING fts5(a);"
+  },
+  {
+    "id": "virtual-table-column",
+    "template": "CREATE VIRTUAL TABLE docs USING fts5(\"@@CANARY@@\");"
+  },
+  {
+    "id": "without-rowid-key",
+    "template": "CREATE TABLE t(\"@@CANARY@@\" TEXT PRIMARY KEY, b) WITHOUT ROWID;"
+  },
+  {
+    "id": "pk-composite",
+    "template": "CREATE TABLE t(a, \"@@CANARY@@\", PRIMARY KEY(a, \"@@CANARY@@\"));"
+  }
+]

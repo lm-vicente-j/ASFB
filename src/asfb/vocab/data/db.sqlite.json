@@ -1,0 +1,22 @@
+{
+  "id": "db.sqlite",
+  "version": 1,
+  "source": {
+    "tool": "SQLite",
+    "version": "3.54.0"
+  },
+  "sha256": "4ba22a560a198bf0d54a43be4bd1ab5894baae04f4f5cf75c9f48891f20762f7",
+  "terms": [
+    "BLOB",
+    "INTEGER",
+    "NUMERIC",
+    "REAL",
+    "TEXT",
+    "sqlite_schema",
+    "sqlite_sequence",
+    "sqlite_stat1",
+    "sqlite_stat2",
+    "sqlite_stat3",
+    "sqlite_stat4"
+  ]
+}
