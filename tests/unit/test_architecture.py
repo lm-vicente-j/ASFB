@@ -17,7 +17,10 @@ EMITTED = "Emitted"
 CENSORED_VIEW = "CensoredView"
 EGRESS_ONLY_NAMES = frozenset({EMITTED, CENSORED_VIEW})
 FORBIDDEN_LOOKUP = "unwrap"
-UNWRAP_ALLOWED = (SANITIZE, NORMALIZE)
+VAULT = "asfb/vault/"
+SESSION = "asfb/session.py"
+MCP_AND_CLI = ("asfb.mcp", "asfb.cli")
+UNWRAP_ALLOWED = (SANITIZE, NORMALIZE, VAULT)
 INGEST_FORBIDDEN = (
     "asfb.schema",
     "asfb.egress",
@@ -28,6 +31,8 @@ INGEST_FORBIDDEN = (
 NORMALIZE_FORBIDDEN = ("asfb.schema", "asfb.egress", "asfb.sanitize", "asfb.ingest")
 TOKENS = "asfb/sanitize/tokens.py"
 TOKENIZE = "tokenize"
+# Only the code lexer (ingest/code.py) and sanitize/tokens.py may name the tokenize module.
+TOKENIZE_SITES = (TOKENS, "asfb/ingest/code.py")
 VIEW = "asfb/egress/view.py"
 VIEW_FORBIDDEN = (
     "asfb.ingest",
@@ -37,6 +42,32 @@ VIEW_FORBIDDEN = (
 )
 ATTRIBUTE_LOOKUPS = frozenset({"getattr", "attrgetter"})
 DYNAMIC_IMPORTS = frozenset({"import_module", "__import__"})
+EXPORT = "export"
+EXPORT_SITES = (KEY, "asfb/sandbox/client.py")
+SANDBOX = "asfb/sandbox/"
+WORKER = "asfb/sandbox/worker.py"
+WORKER_FORBIDDEN = (
+    "asfb.vault",
+    "asfb.mcp",
+    "asfb.cli",
+    "asfb.runner",
+    "asfb.sandbox.selftest",
+)
+RUNNER = "asfb/runner/"
+RUNNER_FORBIDDEN = ("asfb.vault", "asfb.sanitize", "asfb.ingest", "asfb.mcp", "asfb.cli")
+AGENTS = "asfb/agents/"
+AGENTS_FORBIDDEN = ("asfb.session", "asfb.vault", "asfb.sanitize", "asfb.ingest", "asfb.egress")
+SURFACE_FORBIDDEN = (
+    "asfb.vault",
+    "asfb.sanitize",
+    "asfb.ingest",
+    "asfb.normalize",
+    "asfb.types.untrusted",
+)
+CLI = "asfb/cli/"
+MCP = "asfb/mcp/"
+EDITING = "asfb/editing.py"
+EDITING_FORBIDDEN = ("asfb.egress", "asfb.sanitize", "asfb.vault")
 
 
 def _reference(node: ast.AST) -> str | None:
@@ -138,8 +169,8 @@ def _violations(path: str, node: ast.AST, annotated: frozenset[int]) -> Iterator
         _is_under(target, NORMALIZE_FORBIDDEN) for target in _import_targets(path, node)
     ):
         yield "normalize imports a forbidden module"
-    if path != TOKENS and (name == TOKENIZE or text == TOKENIZE):
-        yield "tokenize referenced outside asfb/sanitize/tokens.py"
+    if path not in TOKENIZE_SITES and (name == TOKENIZE or text == TOKENIZE):
+        yield "tokenize referenced outside asfb/sanitize/tokens.py and asfb/ingest/code.py"
     if path == VIEW and any(
         _is_under(target, VIEW_FORBIDDEN) for target in _import_targets(path, node)
     ):
@@ -148,6 +179,28 @@ def _violations(path: str, node: ast.AST, annotated: frozenset[int]) -> Iterator
         yield "untrusted internals used outside untrusted.py"
     if path != KEY and (attribute == "_key" or text == "_key"):
         yield "session key internals used outside key.py"
+    if path not in EXPORT_SITES and (name == EXPORT or text == EXPORT):
+        yield "SessionKey.export used outside key.py and sandbox/client.py"
+    if path == WORKER and any(
+        _is_under(target, WORKER_FORBIDDEN) for target in _import_targets(path, node)
+    ):
+        yield "worker imports a forbidden module"
+    if path.startswith(RUNNER) and any(
+        _is_under(target, RUNNER_FORBIDDEN) for target in _import_targets(path, node)
+    ):
+        yield "runner imports a forbidden module"
+    if path.startswith(AGENTS) and any(
+        _is_under(target, AGENTS_FORBIDDEN) for target in _import_targets(path, node)
+    ):
+        yield "agents imports a forbidden module"
+    if (path.startswith(CLI) or path.startswith(MCP)) and any(
+        _is_under(target, SURFACE_FORBIDDEN) for target in _import_targets(path, node)
+    ):
+        yield "cli or mcp imports a forbidden module"
+    if path == EDITING and any(
+        _is_under(target, EDITING_FORBIDDEN) for target in _import_targets(path, node)
+    ):
+        yield "editing imports a forbidden module"
     if name == "model_construct" or text == "model_construct":
         yield "model_construct used in src"
     if isinstance(node, ast.ImportFrom) and node.module == UNTRUSTED_MODULE:
@@ -258,6 +311,27 @@ def test_src_respects_architecture() -> None:
         ("asfb/normalize/__init__.py", "import asfb.sanitize.tokens"),
         ("asfb/normalize/__init__.py", "from ..egress import emit"),
         ("asfb/normalize/__init__.py", "from asfb.ingest.html import parse_html"),
+        ("asfb/api.py", "b = key.export()"),
+        ("asfb/sanitize/html.py", "b = SessionKey.export(key)"),
+        ("asfb/sandbox/selftest.py", "b = key.export()"),
+        ("asfb/sandbox/worker.py", "b = key.export()"),
+        ("asfb/egress/gate.py", "f = key.export"),
+        ("asfb/types/token.py", "b = getattr(key, 'export')()"),
+        ("asfb/vault/store.py", "from asfb.types.key import SessionKey\nb = SessionKey.export"),
+        ("asfb/sandbox/worker.py", "from asfb.vault import store"),
+        ("asfb/sandbox/worker.py", "import asfb.runner.junit"),
+        ("asfb/sandbox/worker.py", "from asfb import cli"),
+        ("asfb/sandbox/worker.py", "from asfb.mcp.server import serve"),
+        ("asfb/sandbox/worker.py", "from asfb.sandbox import selftest"),
+        ("asfb/runner/execute.py", "from asfb.vault import store"),
+        ("asfb/runner/tools.py", "from asfb.sanitize.html import censor_document"),
+        ("asfb/agents/claude.py", "from asfb.session import Session"),
+        ("asfb/agents/hook.py", "from asfb.egress import emit"),
+        ("asfb/cli/__init__.py", "from asfb.vault import paths"),
+        ("asfb/cli/__init__.py", "from asfb.types.untrusted import Untrusted"),
+        ("asfb/mcp/tools.py", "from asfb.ingest import read_path"),
+        ("asfb/mcp/server.py", "from asfb.normalize import value"),
+        ("asfb/editing.py", "from asfb.egress import emit"),
     ],
 )
 def test_scanner_flags_violation(path: str, source: str) -> None:
@@ -305,6 +379,14 @@ def test_scanner_flags_violation(path: str, source: str) -> None:
             "asfb/vocab/__init__.py",
             "from asfb.egress import Emitted\ndef f(x: Emitted) -> Emitted:\n    return x",
         ),
+        ("asfb/sandbox/client.py", "b = key.export()"),
+        ("asfb/sandbox/worker.py", "from asfb.sanitize.html import censor_with_pairs"),
+        ("asfb/sandbox/worker.py", "from asfb.sandbox import audit, posix, protocol"),
+        ("asfb/types/key.py", "def export(self):\n    return self._key"),
+        ("asfb/runner/execute.py", "from asfb.sandbox import windows"),
+        ("asfb/cli/__init__.py", "from asfb.session import Session"),
+        ("asfb/mcp/tools.py", "from asfb.session import Session"),
+        ("asfb/agents/hook.py", "from asfb.agents.claude import rule_path"),
     ],
 )
 def test_scanner_allows_defining_and_permitted_sites(path: str, source: str) -> None:
@@ -313,3 +395,30 @@ def test_scanner_allows_defining_and_permitted_sites(path: str, source: str) -> 
 
 def test_scanner_reports_syntax_errors() -> None:
     assert scan({"asfb/types/x.py": "def ("}) != []
+
+
+def test_worker_module_is_scanned_and_imports_no_forbidden_package() -> None:
+    sources = _load_src()
+    assert WORKER in sources
+    tree = ast.parse(sources[WORKER], filename=WORKER)
+    targets = [target for node in ast.walk(tree) for target in _import_targets(WORKER, node)]
+    assert not [target for target in targets if _is_under(target, WORKER_FORBIDDEN)]
+    assert "asfb.sandbox.selftest" not in targets
+
+
+def test_vault_and_session_do_not_import_mcp_or_cli() -> None:
+    sources = _load_src()
+    scanned = [path for path in sources if path.startswith(VAULT) or path == SESSION]
+    assert SESSION in scanned
+    assert any(path.startswith(VAULT) for path in scanned)
+    for path in scanned:
+        tree = ast.parse(sources[path], filename=path)
+        targets = [target for node in ast.walk(tree) for target in _import_targets(path, node)]
+        assert not [target for target in targets if _is_under(target, MCP_AND_CLI)], path
+
+
+def test_unwrap_is_allowed_in_vault_only_among_new_packages() -> None:
+    allowed = "from asfb.types.untrusted import unwrap\nx = unwrap(v)"
+    assert scan({"asfb/vault/store.py": allowed}) == []
+    assert scan({"asfb/session.py": allowed}) != []
+    assert scan({"asfb/vault/paths.py": "x = egress.CensoredView"}) != []
