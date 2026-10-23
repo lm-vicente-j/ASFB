@@ -1,0 +1,54 @@
+[
+  {
+    "id": "text-line",
+    "template": "Contact @@CANARY@@ today"
+  },
+  {
+    "id": "text-whole-line",
+    "template": "@@CANARY@@"
+  },
+  {
+    "id": "text-indented-tab",
+    "template": "\t@@CANARY@@"
+  },
+  {
+    "id": "text-after-crlf",
+    "template": "first\r\n@@CANARY@@\r\n"
+  },
+  {
+    "id": "text-after-cr",
+    "template": "first\r@@CANARY@@\r"
+  },
+  {
+    "id": "text-nfd",
+    "template": "café @@CANARY@@ é"
+  },
+  {
+    "id": "text-zero-width",
+    "template": "x​@@CANARY@@‍y"
+  },
+  {
+    "id": "text-bidi-control",
+    "template": "‮@@CANARY@@"
+  },
+  {
+    "id": "text-bom-start",
+    "template": "﻿@@CANARY@@"
+  },
+  {
+    "id": "text-repeated-paragraphs",
+    "template": "@@CANARY@@\n\n@@CANARY@@"
+  },
+  {
+    "id": "text-last-line-no-eol",
+    "template": "first\nlast @@CANARY@@"
+  },
+  {
+    "id": "text-long-line",
+    "template": "@@PAD100K@@ @@CANARY@@"
+  },
+  {
+    "id": "text-entity-like",
+    "template": "&#99;@@CANARY@@ &amp;"
+  }
+]
