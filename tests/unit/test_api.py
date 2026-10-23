@@ -9,7 +9,7 @@ import pytest
 import asfb
 from asfb import api
 from asfb.errors import AsfbError, ErrorCode
-from asfb.schema.doc import Profile
+from asfb.schema.doc import DocV1, Profile
 from asfb.types.key import SessionKey
 
 SAMPLE = (
@@ -23,12 +23,28 @@ KEY = SessionKey(bytes(range(32)))
 OTHER_KEY = SessionKey(bytes(range(1, 33)))
 
 
+def _html(doc: api.Doc) -> DocV1:
+    assert isinstance(doc.model, DocV1)
+    return doc.model
+
+
 def _code(error: AsfbError) -> ErrorCode:
     return error.code
 
 
 def test_all_lists_exactly_the_public_names() -> None:
-    expected = {"sanitize", "sanitize_html", "Doc", "SessionKey", "AsfbError", "ErrorCode"}
+    expected = {
+        "sanitize",
+        "sanitize_html",
+        "sanitize_text",
+        "sanitize_markdown",
+        "sanitize_python",
+        "Doc",
+        "Session",
+        "SessionKey",
+        "AsfbError",
+        "ErrorCode",
+    }
     assert set(asfb.__all__) == expected
     assert len(asfb.__all__) == len(expected)
     for name in asfb.__all__:
@@ -39,7 +55,7 @@ def test_sanitize_html_returns_a_doc_with_all_parts() -> None:
     doc = api.sanitize_html(SAMPLE, key=KEY)
     assert isinstance(doc, api.Doc)
     assert doc.profile is Profile.STRICT
-    assert doc.model.body
+    assert _html(doc).body
     assert doc.views.censored().startswith("<!DOCTYPE html>\n<html>")
 
 
@@ -54,11 +70,11 @@ def test_sanitize_accepts_a_path(tmp_path: Path) -> None:
 def test_sanitize_accepts_a_string_path_with_htm_suffix(tmp_path: Path) -> None:
     page = tmp_path / "page.htm"
     page.write_text("<p>x</p>", encoding="utf-8")
-    assert api.sanitize(str(page), key=KEY).model.body
+    assert _html(api.sanitize(str(page), key=KEY)).body
 
 
-@pytest.mark.parametrize("name", ["notes.txt", "page.html.txt", "page"])
-def test_non_html_path_is_refused(tmp_path: Path, name: str) -> None:
+@pytest.mark.parametrize("name", ["notes.pdf", "page.html.pdf", "page"])
+def test_non_document_path_is_refused(tmp_path: Path, name: str) -> None:
     path = tmp_path / name
     path.write_text("<p>x</p>", encoding="utf-8")
     with pytest.raises(AsfbError) as raised:
