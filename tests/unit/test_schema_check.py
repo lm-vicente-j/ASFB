@@ -77,6 +77,34 @@ def _jsonschema_valid(schema: dict[str, Any], instance: object) -> bool:
     return Draft202012Validator(schema).is_valid(instance)
 
 
+def _assert_fails_closed(schema: dict[str, Any], instance: object) -> None:
+    """The compiled checker never accepts what jsonschema rejects.
+
+    The converse is allowed for one known case: jsonschema (Draft 6 and later, so Draft 2020-12)
+    takes an integer-valued float such as 1.0 as an "integer", while the compiled checker takes
+    only Python ints and refuses it. That only makes the checker stricter, so it is tolerated.
+    Any other disagreement fails the test.
+    """
+    checked = compile_schema(schema)(instance)
+    expected = _jsonschema_valid(schema, instance)
+    assert (not checked) or expected, "compile_schema accepted what jsonschema rejects"
+    if checked is not expected:
+        assert expected is True
+        assert _has_integer_valued_float(instance), (
+            "compile_schema is stricter than jsonschema on something other than 1.0-style integers"
+        )
+
+
+def _has_integer_valued_float(value: object) -> bool:
+    if isinstance(value, float):
+        return value.is_integer()
+    if isinstance(value, list):
+        return any(_has_integer_valued_float(item) for item in value)
+    if isinstance(value, dict):
+        return any(_has_integer_valued_float(item) for item in value.values())
+    return False
+
+
 @pytest.mark.parametrize("resource", RESOURCES)
 def test_committed_schema_compiles(resource: str) -> None:
     compile_schema(SCHEMAS[resource])
@@ -86,8 +114,23 @@ def test_committed_schema_compiles(resource: str) -> None:
 @settings(max_examples=150, deadline=None)
 @given(instance=JSON_VALUES)
 def test_random_json_agrees_with_jsonschema(resource: str, instance: object) -> None:
-    schema = SCHEMAS[resource]
-    assert compile_schema(schema)(instance) is _jsonschema_valid(schema, instance)
+    _assert_fails_closed(SCHEMAS[resource], instance)
+
+
+def test_integer_valued_float_is_refused_where_jsonschema_accepts() -> None:
+    """Minimal example Hypothesis found: a vocab version 1.0 in an emitted DocV1 document.
+
+    jsonschema 4.23 through 4.26 accept 1.0 for "integer"; the compiled checker refuses it.
+    The checker is the stricter side, so this is fail-closed and the test pins it on purpose.
+    """
+    schema = SCHEMAS[SCHEMA_RESOURCE]
+    instance = _valid_base(SCHEMA_RESOURCE)
+    assert _jsonschema_valid(schema, instance) is True
+    instance["vocab"][0]["version"] = 1.0
+    assert _jsonschema_valid(schema, instance) is True
+    assert compile_schema(schema)(instance) is False
+    assert compile_schema({"type": "integer"})(1.0) is False
+    assert compile_schema({"type": "integer"})(2) is True
 
 
 Draw = Callable[[st.SearchStrategy[Any]], Any]
@@ -126,7 +169,7 @@ def test_mutated_emitted_documents_agree_with_jsonschema(
     instance = _valid_base(resource)
     for _ in range(data.draw(st.integers(min_value=1, max_value=3))):
         instance = _mutate(data.draw, instance)
-    assert compile_schema(schema)(instance) is _jsonschema_valid(schema, instance)
+    _assert_fails_closed(schema, instance)
 
 
 _SAMPLES = {
