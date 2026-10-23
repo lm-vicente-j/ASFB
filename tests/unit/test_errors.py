@@ -36,6 +36,22 @@ def test_m1_codes_are_defined() -> None:
     assert M1_CODES <= {code.value for code in ErrorCode}
 
 
+B1_CODES = {
+    "E_WORKER_START",
+    "E_WORKER_TIMEOUT",
+    "E_WORKER_LIMIT",
+    "E_WORKER_PROTOCOL",
+    "E_WORKER_PAIRS",
+}
+
+
+def test_b1_worker_codes_are_defined_with_their_names() -> None:
+    values = {code.value for code in ErrorCode}
+    assert B1_CODES <= values
+    for name in B1_CODES:
+        assert ErrorCode(name).value == name
+
+
 def test_str_and_args_are_code_only() -> None:
     error = AsfbError(ErrorCode.E_TOKEN_ENCODING)
     assert str(error) == "E_TOKEN_ENCODING"
@@ -91,3 +107,39 @@ def test_copy_round_trip(cls: type[AsfbError]) -> None:
         assert restored.code is ErrorCode.E_EGRESS_TYPE
         assert restored.args == original.args
         assert str(restored) == "E_EGRESS_TYPE"
+
+
+B2_CODES = {
+    "E_VAULT_FULL",
+    "E_DOC_UNKNOWN",
+    "E_PATH_OUTSIDE_ROOT",
+    "E_PATH_UNKNOWN_TOKEN",
+    "E_ROOT_INVALID",
+    "E_LIST_DEPTH",
+    "E_LIST_LIMIT",
+}
+
+
+def test_b2_vault_and_path_codes_are_defined_with_their_names() -> None:
+    values = {code.value for code in ErrorCode}
+    assert B2_CODES <= values
+    for name in B2_CODES:
+        assert ErrorCode(name).value == name
+
+
+B3_CODES = {
+    "E_EDIT_STALE",
+    "E_EDIT_UNKNOWN_TOKEN",
+    "E_EDIT_NO_MATCH",
+    "E_EDIT_AMBIGUOUS",
+    "E_EDIT_INVALID_TEXT",
+    "E_EDIT_WRITE",
+    "E_EDIT_TOO_LARGE",
+}
+
+
+def test_b3_edit_codes_are_defined_with_their_names() -> None:
+    values = {code.value for code in ErrorCode}
+    assert B3_CODES <= values
+    for name in B3_CODES:
+        assert ErrorCode(name).value == name
